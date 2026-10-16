@@ -78,14 +78,16 @@ export default defineConfig({
   plugins: [react(), ...pdfjsCmaps()],
   server: {
     port: 5173,
+    // API_TARGET lets a second checkout (or a busy host) point the dev proxy
+    // at a server on another port without editing the file.
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/plugins': 'http://localhost:3000',
-      '/oauth/token': 'http://localhost:3000',
-      '/oauth/register': 'http://localhost:3000',
-      '/oauth/revoke': 'http://localhost:3000',
-      '/.well-known': 'http://localhost:3000',
-      '/collab': { target: 'ws://localhost:3000', ws: true },
+      '/api': process.env.API_TARGET || 'http://localhost:3000',
+      '/plugins': process.env.API_TARGET || 'http://localhost:3000',
+      '/oauth/token': process.env.API_TARGET || 'http://localhost:3000',
+      '/oauth/register': process.env.API_TARGET || 'http://localhost:3000',
+      '/oauth/revoke': process.env.API_TARGET || 'http://localhost:3000',
+      '/.well-known': process.env.API_TARGET || 'http://localhost:3000',
+      '/collab': { target: (process.env.API_TARGET || 'http://localhost:3000').replace(/^http/, 'ws'), ws: true },
     },
   },
   build: {

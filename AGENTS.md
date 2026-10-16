@@ -4,10 +4,11 @@ Guidance for AI agents (and a fast orientation for humans) working in this repo.
 
 ## What this is
 
-Aldine — a slim, self-hosted collaborative LaTeX platform (Overleaf
-alternative). Fastify server with embedded Hocuspocus/Yjs collab, per-project
-git repos (worktree per branch), sandboxed TeX Live compiler service, React 19
-+ Vite + CodeMirror 6 frontend. AGPL-3.0.
+codebuddy-prism — a fork of Aldine: a self-hosted collaborative LaTeX platform
+(Overleaf alternative) with a prism-style AI writing assistant (OpenAI-compatible
+endpoint, key server-side only). Fastify server with embedded Hocuspocus/Yjs
+collab, per-project git repos (worktree per branch), sandboxed TeX Live
+compiler service, React 19 + Vite + CodeMirror 6 frontend. AGPL-3.0.
 
 ## Layout
 

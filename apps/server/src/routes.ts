@@ -194,7 +194,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         const greeting = user.name ? `Hi ${user.name},` : 'Hi there,';
         email.sendMail({
           to: user.email,
-          subject: 'Welcome to Aldine',
+          subject: 'Welcome to codebuddy-prism',
           text: `${greeting}\n\nWelcome to Aldine — write LaTeX together, fast, versioned, and yours.\n\nOpen your workspace: ${base}\n\nStart a blank paper or a template, import a project from GitHub or an Overleaf ZIP, then hit ⌘S to typeset. Invite others and you'll see their cursors live.\n\nHappy writing.`,
           html: `<p>${greeting}</p><p>Welcome to <strong>Aldine</strong> — write LaTeX together, fast, versioned, and yours.</p><p><a href="${base}">Open your workspace</a></p><p>Start a blank paper or a template, import a project from GitHub or an Overleaf ZIP, then hit ⌘S to typeset. Invite others and you'll see their cursors live.</p><p>Happy writing.</p>`,
         }).catch((err) => console.error('[aldine] welcome email failed:', err?.message || err));
@@ -1686,7 +1686,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
   projectRoute('post', 'push', async (req, reply) => {
     const l = await linkedRemote(req, reply); if (!l) return;
     flushBranchDocs(req.params.id, 'main'); // capture unsaved editor content before committing
-    const message = cleanCommitMessage(req.body?.message, 'Update from Aldine');
+    const message = cleanCommitMessage(req.body?.message, 'Update from codebuddy-prism');
     const commit = await gitops.autoCommit(req.params.id, 'main', message, reqUser(req)?.name).catch(() => ({ committed: false, hash: undefined as string | undefined }));
     // HEAD is the commit hash we just made (when we committed), else look it up.
     const head = commit.committed ? commit.hash ?? null : await gitops.headCommit(req.params.id).catch(() => null);

@@ -281,7 +281,7 @@ export default function Home() {
       <div className="home__inner">
         <div className="home__bar">
           <div>
-            <h1 className="home__brand">aldine<em>.</em></h1>
+            <h1 className="home__brand">codebuddy-prism<em>.</em></h1>
             <p className="home__tag">Write LaTeX together. Fast, versioned, yours.</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -538,7 +538,7 @@ export default function Home() {
                 <p className="tpl-choice" data-testid="template-choice">
                   Starting from {chosen ? chosen.name : 'the built-in article'}
                   {chosen?.license ? ` (${chosen.license})` : ''}
-                  {chosen?.kit ? `. Aldine downloads the official kit from ${chosen.kit.host} when you create the project.` : ''}
+                  {chosen?.kit ? `. codebuddy-prism downloads the official kit from ${chosen.kit.host} when you create the project.` : ''}
                 </p>
               </>
             )}

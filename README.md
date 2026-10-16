@@ -1,11 +1,16 @@
-# [Aldine](https://aldine.dev)
+# codebuddy-prism
 
-**Write LaTeX together. Fast, versioned, yours.**
+**Write LaTeX together — with an AI assistant. Fast, versioned, yours.**
 
-[![CI](https://github.com/trahloff/Aldine/actions/workflows/ci.yml/badge.svg)](https://github.com/trahloff/Aldine/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/trahloff)
+
+A fork of [Aldine](https://aldine.dev) (AGPL-3.0) that adds a prism-style AI
+writing assistant: streaming chat, model selection, and agent edits you review
+as diffs with Keep/Undo. The AI backend is any OpenAI-compatible endpoint
+(default: Tencent Hunyuan) with the key held server-side only.
+
+Independent open-source project. Not affiliated with or endorsed by Tencent
+CodeBuddy.
 
 Aldine is a self-hosted, open-source collaborative LaTeX editor and an
 Overleaf alternative. It is slim and built for speed: real-time multi-cursor
