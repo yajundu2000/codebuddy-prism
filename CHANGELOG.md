@@ -4,6 +4,24 @@ All notable changes to Aldine are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/) (pre-1.0: minor bumps may break things).
 
+## [0.1.0] — 2026-10-16
+
+First release of codebuddy-prism, a fork of Aldine.
+
+### Added
+- AI writing assistant panel: streamed chat against any OpenAI-compatible
+  endpoint (default Hunyuan), model picker, per-project conversations kept
+  server-side. The API key lives only in the server environment
+  (`PRISM_AI_API_KEY` / `PRISM_AI_BASE_URL` / `PRISM_AI_MODELS`).
+- Agent tool loop: the assistant reads, edits, and compiles the project
+  through the same tool registry as the MCP connector, pinned to the open
+  project and branch; each turn's commits open the Keep/Undo review dialog.
+- e2e coverage for the assistant (mocked provider) and a deploy stack for a
+  small VPS (`deploy/docker-compose.prism.yml` + `deploy.sh`).
+
+### Changed
+- Rebranded from Aldine (AGPL-3.0 kept — see TRADEMARK.md); indigo accent.
+
 ## [Unreleased]
 
 ### Added

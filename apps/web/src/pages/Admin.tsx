@@ -78,7 +78,7 @@ export default function Admin() {
       <div className="home__inner">
         <div className="home__bar">
           <div>
-            <h1 className="home__brand">aldine<em>.</em></h1>
+            <h1 className="home__brand">codebuddy-prism<em>.</em></h1>
             <p className="home__tag">Server admin</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

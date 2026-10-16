@@ -2,7 +2,9 @@
 # Build stages run on the BUILD machine's arch (their dist/ output is
 # arch-independent JS) — without this, multi-arch CI builds crawl through
 # vite/tsc under QEMU emulation for hours. Only the runtime stage is per-arch.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS webbuild
+# ARG NODE_IMAGE lets CN builds swap in a registry mirror (deploy.sh does).
+ARG NODE_IMAGE=docker.io/library/node:22-alpine
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS webbuild
 WORKDIR /build
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
@@ -13,7 +15,7 @@ COPY apps/web apps/web
 RUN npm run build -w apps/web
 
 # ---- build server (TS -> JS, so the container boots in seconds, not minutes) ----
-FROM --platform=$BUILDPLATFORM node:22-alpine AS serverbuild
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS serverbuild
 WORKDIR /build
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
@@ -23,7 +25,7 @@ COPY apps/server apps/server
 RUN npm run build -w apps/server
 
 # ---- runtime ----
-FROM node:22-alpine
+FROM ${NODE_IMAGE}
 RUN apk add --no-cache git
 WORKDIR /srv
 COPY package.json package-lock.json ./

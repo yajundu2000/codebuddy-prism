@@ -12,17 +12,23 @@ REMOTE_DIR="~/codebuddy-prism"
 VERSION="$(node -p "require('./package.json').version")"
 APP_IMAGE="codebuddy-prism-app:$VERSION"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
+# docker.io is unreachable from CN without a mirror; DaoCloud's is the usual
+# working one. Override with NODE_IMAGE= when it changes.
+NODE_IMAGE="${NODE_IMAGE:-docker.m.daocloud.io/library/node:22-alpine}"
 
 case "${1:-}" in
   build)
-    docker build -f apps/server/Dockerfile --build-arg NPM_REGISTRY="$NPM_REGISTRY" -t "$APP_IMAGE" .
+    docker build -f apps/server/Dockerfile \
+      --build-arg NPM_REGISTRY="$NPM_REGISTRY" \
+      --build-arg NODE_IMAGE="$NODE_IMAGE" \
+      -t "$APP_IMAGE" .
     docker tag "$APP_IMAGE" codebuddy-prism-app:latest
     echo "built $APP_IMAGE"
     ;;
   push)
     [[ -d deploy ]] || { echo "run from the repo root"; exit 1; }
     echo "shipping image (this streams ~300MB, a minute or two)…"
-    docker save codebuddy-prism-app:latest | gzip | $SSH "gunzip | docker load"
+    docker save "codebuddy-prism-app:$VERSION" codebuddy-prism-app:latest | gzip | $SSH "gunzip | docker load"
     $SSH "mkdir -p $REMOTE_DIR/deploy"
     scp -i "$SSH_KEY" deploy/docker-compose.prism.yml "$SERVER_USER@$SERVER_IP:$REMOTE_DIR/docker-compose.prism.yml"
     # .env ships only if present locally; the key never touches the repo
