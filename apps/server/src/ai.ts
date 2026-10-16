@@ -141,3 +141,147 @@ export async function diagnose(input: DiagnoseInput): Promise<AiResult> {
   }
   return diagnoseAnthropic(input);
 }
+
+// ---- streaming chat (assistant panel) ----
+
+export interface ToolDef { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }
+export interface ToolCallMsg { id: string; type: 'function'; function: { name: string; arguments: string } }
+export interface ChatMsg {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content?: string;
+  tool_calls?: ToolCallMsg[];
+  tool_call_id?: string;
+}
+
+export interface ChatResult {
+  content: string;
+  toolCalls: Array<{ id: string; name: string; args: string }>;
+}
+
+/**
+ * Chat provider precedence: PRISM_AI_* (this fork's native config, defaulting
+ * to the Hunyuan OpenAI-compatible endpoint) > OpenRouter > generic
+ * OpenAI-compatible. The diagnose() path keeps its Anthropic fallback; chat
+ * streams only the OpenAI wire format, so an ANTHROPIC_API_KEY-only instance
+ * reports the chat as unconfigured (the error names the env var to set).
+ */
+function chatProvider(): { base: string; key: string } | null {
+  if (process.env.PRISM_AI_API_KEY) {
+    return { base: process.env.PRISM_AI_BASE_URL || 'https://api.hunyuan.cloud.tencent.com/v1', key: process.env.PRISM_AI_API_KEY };
+  }
+  if (process.env.OPENROUTER_API_KEY) return { base: process.env.ALDINE_AI_BASE_URL || 'https://openrouter.ai/api/v1', key: process.env.OPENROUTER_API_KEY };
+  if (process.env.OPENAI_API_KEY) return { base: process.env.ALDINE_AI_BASE_URL || 'https://api.openai.com/v1', key: process.env.OPENAI_API_KEY };
+  return null;
+}
+
+export function chatConfigured(): boolean {
+  return chatProvider() !== null;
+}
+
+export interface AiModelInfo { id: string; label?: string }
+
+/** Model catalog for the panel's picker. PRISM_AI_MODELS is a JSON array of
+ *  {id, label}; the default follows the configured provider. */
+export function aiModels(): AiModelInfo[] {
+  const raw = process.env.PRISM_AI_MODELS;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as AiModelInfo[];
+      if (Array.isArray(parsed) && parsed.length) return parsed.filter((m) => m && typeof m.id === 'string');
+    } catch { /* malformed override → fall through to provider defaults */ }
+  }
+  const base = chatProvider()?.base || '';
+  if (base.includes('hunyuan')) {
+    return [
+      { id: 'hunyuan-turbos-latest', label: 'Hunyuan TurboS' },
+      { id: 'hunyuan-standard', label: 'Hunyuan Standard' },
+      { id: 'hunyuan-lite', label: 'Hunyuan Lite (free)' },
+    ];
+  }
+  if (base.includes('openrouter')) {
+    return [
+      { id: 'anthropic/claude-sonnet-5', label: 'Claude Sonnet 5' },
+      { id: 'anthropic/claude-opus-5', label: 'Claude Opus 5' },
+    ];
+  }
+  if (base) return [{ id: model(), label: model() }];
+  return [];
+}
+
+export function chatModel(requested?: string): string {
+  if (requested && requested.trim()) return requested;
+  if (process.env.ALDINE_AI_MODEL) return process.env.ALDINE_AI_MODEL;
+  const models = aiModels();
+  if (models.length) return models[0].id;
+  return model();
+}
+
+/**
+ * Streaming chat-completions call. Deltas are surfaced through onDelta as they
+ * arrive; tool_calls are aggregated across chunks and returned whole (the
+ * agent loop replays them as assistant messages for the next round).
+ */
+export async function chatStream(opts: {
+  messages: ChatMsg[];
+  tools?: ToolDef[];
+  model?: string;
+  onDelta?: (text: string) => void;
+  signal?: AbortSignal;
+}): Promise<ChatResult> {
+  const base = chatProvider();
+  if (!base) throw new Error('No chat provider configured — set PRISM_AI_API_KEY on the server');
+  const body: Record<string, unknown> = { model: chatModel(opts.model), messages: opts.messages, stream: true };
+  if (opts.tools?.length) body.tools = opts.tools;
+  const res = await fetch(`${base.base.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${base.key}` },
+    body: JSON.stringify(body),
+    signal: opts.signal,
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`AI provider error (HTTP ${res.status}): ${(await res.text().catch(() => '')).slice(0, 300)}`);
+  }
+  let content = '';
+  const calls: Array<{ idx: number; id: string; name: string; args: string }> = [];
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  const handleLine = (line: string): boolean => {
+    if (!line.startsWith('data:')) return true;
+    const data = line.slice(5).trim();
+    if (data === '[DONE]') return false;
+    let evt: { choices?: Array<{ delta?: { content?: string; tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }> } }> };
+    try { evt = JSON.parse(data); } catch { return true; }
+    const delta = evt.choices?.[0]?.delta;
+    if (typeof delta?.content === 'string' && delta.content) {
+      content += delta.content;
+      opts.onDelta?.(delta.content);
+    }
+    for (const tc of delta?.tool_calls ?? []) {
+      const idx = tc.index ?? 0;
+      let acc = calls.find((c) => c.idx === idx);
+      if (!acc) { acc = { idx, id: '', name: '', args: '' }; calls.push(acc); }
+      if (tc.id) acc.id = tc.id;
+      if (tc.function?.name) acc.name = tc.function.name;
+      if (tc.function?.arguments) acc.args += tc.function.arguments;
+    }
+    return true;
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    let stop = false;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).replace(/\r$/, '');
+      buf = buf.slice(nl + 1);
+      if (!handleLine(line)) { stop = true; break; }
+    }
+    if (stop) break;
+  }
+  return {
+    content,
+    toolCalls: calls.sort((a, b) => a.idx - b.idx).map(({ id, name, args }) => ({ id, name, args })),
+  };
+}

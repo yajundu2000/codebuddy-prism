@@ -460,3 +460,91 @@ export function accountIdentity(user: { id: string; name: string; email?: string
   for (const ch of user.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return { name: user.name || user.email || 'Signed in', color: PRESENCE_PALETTE[h % PRESENCE_PALETTE.length] };
 }
+
+// ---------- AI assistant ----------
+
+export interface AiModelInfo { id: string; label?: string }
+export interface AiStatus { configured: boolean; model: string; chatConfigured: boolean; models: AiModelInfo[] }
+export interface AgentMessage { role: 'user' | 'assistant' | 'tool'; content: string; toolName?: string; ts: number }
+export interface AgentSessionInfo { id: string; title: string; model: string; messageCount: number; updatedAt: number }
+export interface AgentSession { id: string; title: string; model: string; messages: AgentMessage[]; updatedAt: number }
+
+export async function aiStatus(): Promise<AiStatus> {
+  const res = await fetch(withBase('/api/ai/status'));
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function agentSessionList(projectId: string): Promise<AgentSessionInfo[]> {
+  const res = await fetch(withBase(`/api/projects/${projectId}/agent/sessions`));
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()).sessions;
+}
+
+export async function agentSession(projectId: string, sid: string): Promise<AgentSession> {
+  const res = await fetch(withBase(`/api/projects/${projectId}/agent/sessions/${sid}`));
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function agentDeleteSession(projectId: string, sid: string): Promise<void> {
+  const res = await fetch(withBase(`/api/projects/${projectId}/agent/sessions/${sid}`), { method: 'DELETE' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export interface AgentChatHandlers {
+  onStart?(sessionId: string, model: string): void;
+  onDelta(text: string): void;
+  onDone(): void;
+  onError(message: string): void;
+}
+
+/** One streamed chat turn: server SSE events (start/delta/done/error). */
+export async function agentChat(
+  projectId: string,
+  body: { sessionId?: string; message: string; model?: string },
+  handlers: AgentChatHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(withBase(`/api/projects/${projectId}/agent/chat`), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const err = await res.json().catch(() => ({}) as { error?: string });
+    handlers.onError(err.error || `HTTP ${res.status}`);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let event = '';
+  let data = '';
+  const dispatch = () => {
+    if (!event) return;
+    let parsed: any;
+    try { parsed = data ? JSON.parse(data) : {}; } catch { parsed = {}; }
+    if (event === 'start') handlers.onStart?.(parsed.sessionId, parsed.model);
+    else if (event === 'delta') handlers.onDelta(parsed.text || '');
+    else if (event === 'done') handlers.onDone();
+    else if (event === 'error') handlers.onError(parsed.message || 'AI request failed');
+    event = '';
+    data = '';
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).replace(/\r$/, '');
+      buf = buf.slice(nl + 1);
+      if (line === '') { dispatch(); continue; }
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) data += line.slice(5).trim();
+    }
+  }
+  dispatch();
+}

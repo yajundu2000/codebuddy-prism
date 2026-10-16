@@ -25,7 +25,9 @@ import { guessRoot, detectRoot, adoptRootIfUnset } from './root.js';
 import { config } from './config.js';
 import { detectEngine, decodeText } from './detect.js';
 import { multipartBoundary, parseMultipart } from './multipart.js';
-import { aiConfigured, aiModel, diagnose } from './ai.js';
+import { aiConfigured, aiModel, diagnose, chatConfigured, aiModels, chatStream, type ChatMsg } from './ai.js';
+import * as agentSessions from './agent/session.js';
+import { assistantSystemPrompt } from './agent/prompts.js';
 import * as comments from './comments.js';
 import * as auth from './auth.js';
 import * as oauth from './oauth.js';
@@ -1836,7 +1838,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
   });
 
   // ---------- AI error fix ----------
-  app.get('/api/ai/status', async () => ({ configured: aiConfigured(), model: aiModel() }));
+  app.get('/api/ai/status', async () => ({ configured: aiConfigured(), model: aiModel(), chatConfigured: chatConfigured(), models: aiModels() }));
 
   app.post<{ Params: { id: string }; Body: { branch?: string; errors?: Array<{ type: string; line: number | null; message: string; file?: string }>; log?: string } }>(
     '/api/projects/:id/ai/fix', async (req, reply) => {
@@ -1857,6 +1859,74 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       } catch (err: any) {
         return reply.code(502).send({ error: `AI request failed: ${err.message}` });
       }
+    });
+
+  // ---------- AI assistant (chat panel) ----------
+
+  app.get<{ Params: { id: string } }>('/api/projects/:id/agent/sessions', async (req) => ({
+    sessions: agentSessions.listSessions(req.params.id),
+  }));
+
+  app.get<{ Params: { id: string; sid: string } }>('/api/projects/:id/agent/sessions/:sid', async (req, reply) => {
+    const session = agentSessions.getSession(req.params.id, req.params.sid);
+    if (!session) return reply.code(404).send({ error: 'Session not found' });
+    return session;
+  });
+
+  app.delete<{ Params: { id: string; sid: string } }>('/api/projects/:id/agent/sessions/:sid', async (req, reply) => {
+    if (!agentSessions.deleteSession(req.params.id, req.params.sid)) return reply.code(404).send({ error: 'Session not found' });
+    return { ok: true };
+  });
+
+  /**
+   * One chat turn, streamed as SSE: `start` (sessionId), `delta` {text},
+   * `done`, `error` {message}. The session persists across turns; an aborted
+   * stream (client closed) cancels the upstream call and the turn is not
+   * appended — a half answer that looks complete is worse than none.
+   */
+  app.post<{ Params: { id: string }; Body: { sessionId?: string; message: string; model?: string } }>(
+    '/api/projects/:id/agent/chat', async (req, reply) => {
+      const message = (req.body?.message || '').trim();
+      if (!message) return reply.code(400).send({ error: 'Message required' });
+      if (!chatConfigured()) {
+        return reply.code(400).send({ error: 'AI is not configured. Set PRISM_AI_API_KEY on the server to enable the assistant.' });
+      }
+      if (!(await aiLimiter.take(clientKey(req, reqUser(req)?.id)))) return reply.code(429).send({ error: 'AI rate limit reached — please slow down' });
+      const { id: projectId } = req.params;
+      const meta = await store.readMeta(projectId);
+      const model = req.body?.model || '';
+      const session = agentSessions.openSession(projectId, req.body?.sessionId, model);
+      const messages: ChatMsg[] = [
+        { role: 'system', content: assistantSystemPrompt({ project: meta.name, branch: 'main' }) },
+        ...session.messages
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .map((m) => ({ role: m.role, content: m.content }) as ChatMsg),
+        { role: 'user', content: message },
+      ];
+      reply.hijack();
+      const raw = reply.raw;
+      raw.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+      const send = (event: string, data: unknown): void => { if (!raw.writableEnded) raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); };
+      send('start', { sessionId: session.id, model });
+      let closed = false;
+      const ac = new AbortController();
+      raw.on('close', () => { closed = true; ac.abort(); });
+      try {
+        const result = await chatStream({
+          messages,
+          model: model || undefined,
+          signal: ac.signal,
+          onDelta: (text) => { if (!closed) send('delta', { text }); },
+        });
+        agentSessions.appendMessages(projectId, session, [
+          { role: 'user', content: message, ts: Date.now() },
+          { role: 'assistant', content: result.content, ts: Date.now() },
+        ]);
+        if (!closed) send('done', { sessionId: session.id });
+      } catch (err: any) {
+        if (!closed) send('error', { message: `AI request failed: ${err.message}` });
+      }
+      raw.end();
     });
 
   // ---------- plugins ----------

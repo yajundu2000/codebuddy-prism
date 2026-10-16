@@ -35,6 +35,7 @@ import FormatToolbar from '../components/FormatToolbar';
 import { toggleTheme } from '../theme';
 import { shortcut } from '../platform';
 import ProjectSettings from '../components/ProjectSettings';
+import AssistantPanel from '../components/AssistantPanel';
 import { ENGINES } from '../util/engines';
 
 type CompileStatus = 'idle' | 'compiling' | 'ok' | 'error';
@@ -996,6 +997,7 @@ export default function Editor() {
             <button className={`sidebar__tab ${tab === 'review' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('review')} role="tab" data-testid="tab-review">
               Review{comments.some((c) => !c.resolved) ? ` (${comments.filter((c) => !c.resolved).length})` : ''}
             </button>
+            <button className={`sidebar__tab ${tab === 'chat' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('chat')} role="tab" data-testid="tab-chat">Assistant</button>
             {pluginPanels.map((p) => (
               <button key={p.id} className={`sidebar__tab ${tab === p.id ? 'sidebar__tab--active' : ''}`} onClick={() => setTab(p.id)} role="tab" data-testid={`tab-${p.id}`}>
                 {p.title}
@@ -1056,6 +1058,7 @@ export default function Editor() {
               />
             )}
             {tab === 'history' && <HistoryPanel projectId={id} branch={branch} version={historyVersion} live={agentPresent} />}
+            {tab === 'chat' && <AssistantPanel id={id} />}
             {tab === 'review' && (
               <ReviewPanel
                 comments={comments}
