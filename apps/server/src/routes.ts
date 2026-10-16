@@ -25,9 +25,10 @@ import { guessRoot, detectRoot, adoptRootIfUnset } from './root.js';
 import { config } from './config.js';
 import { detectEngine, decodeText } from './detect.js';
 import { multipartBoundary, parseMultipart } from './multipart.js';
-import { aiConfigured, aiModel, diagnose, chatConfigured, aiModels, chatStream, type ChatMsg } from './ai.js';
+import { aiConfigured, aiModel, diagnose, chatConfigured, aiModels, type ChatMsg } from './ai.js';
 import * as agentSessions from './agent/session.js';
 import { assistantSystemPrompt } from './agent/prompts.js';
+import { runAgentLoop, agentLoopBusy } from './agent/loop.js';
 import * as comments from './comments.js';
 import * as auth from './auth.js';
 import * as oauth from './oauth.js';
@@ -1880,29 +1881,40 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
 
   /**
    * One chat turn, streamed as SSE: `start` (sessionId), `delta` {text},
-   * `done`, `error` {message}. The session persists across turns; an aborted
-   * stream (client closed) cancels the upstream call and the turn is not
-   * appended — a half answer that looks complete is worse than none.
+   * `tool` {name, ok, summary}, `done` {commits}, `error` {message}. The
+   * turn runs the agent tool loop pinned to this project+branch; `done`
+   * carries the commits the tools made so the client can offer the existing
+   * agent-review (Keep/Undo) dialog. An aborted stream (client closed)
+   * cancels the upstream call and the turn is not appended — a half answer
+   * that looks complete is worse than none.
    */
-  app.post<{ Params: { id: string }; Body: { sessionId?: string; message: string; model?: string } }>(
+  app.post<{ Params: { id: string }; Body: { sessionId?: string; message: string; model?: string; branch?: string } }>(
     '/api/projects/:id/agent/chat', async (req, reply) => {
       const message = (req.body?.message || '').trim();
       if (!message) return reply.code(400).send({ error: 'Message required' });
       if (!chatConfigured()) {
         return reply.code(400).send({ error: 'AI is not configured. Set PRISM_AI_API_KEY on the server to enable the assistant.' });
       }
+      if (agentLoopBusy(req.params.id)) return reply.code(429).send({ error: 'Another assistant turn is still running in this project' });
       if (!(await aiLimiter.take(clientKey(req, reqUser(req)?.id)))) return reply.code(429).send({ error: 'AI rate limit reached — please slow down' });
       const { id: projectId } = req.params;
+      const branch = req.body?.branch || 'main';
+      if (!BRANCH_RE.test(branch) || branch.includes('..')) return reply.code(400).send({ error: 'bad branch name' });
       const meta = await store.readMeta(projectId);
       const model = req.body?.model || '';
       const session = agentSessions.openSession(projectId, req.body?.sessionId, model);
+      // Past tool turns replay as nothing: their effects live in the files
+      // the model can read again — keeping tool transcripts would spend the
+      // context budget on stale output.
       const messages: ChatMsg[] = [
-        { role: 'system', content: assistantSystemPrompt({ project: meta.name, branch: 'main' }) },
+        { role: 'system', content: assistantSystemPrompt({ project: meta.name, branch }) },
         ...session.messages
           .filter((m) => m.role === 'user' || m.role === 'assistant')
           .map((m) => ({ role: m.role, content: m.content }) as ChatMsg),
         { role: 'user', content: message },
       ];
+      const identity = { user: reqUser(req), tokenScope: (req as any)._tokenScope ?? null, ip: req.ip };
+      const headBefore = await gitops.branchHead(projectId, branch).catch(() => null);
       reply.hijack();
       const raw = reply.raw;
       raw.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
@@ -1912,17 +1924,26 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       const ac = new AbortController();
       raw.on('close', () => { closed = true; ac.abort(); });
       try {
-        const result = await chatStream({
+        const result = await runAgentLoop({
+          projectId,
+          branch,
+          identity,
+          base: publicBase(req),
           messages,
           model: model || undefined,
           signal: ac.signal,
           onDelta: (text) => { if (!closed) send('delta', { text }); },
+          onToolEvent: (event) => { if (!closed) send('tool', event); },
         });
+        flushBranchDocs(projectId, branch);
+        const activity = await gitops.agentActivitySince(projectId, branch, headBefore ? { head: headBefore, at: new Date().toISOString() } : null).catch(() => null);
+        const commits = (activity?.commits || []).map((c) => ({ hash: c.hash, message: c.message }));
         agentSessions.appendMessages(projectId, session, [
           { role: 'user', content: message, ts: Date.now() },
+          ...result.toolEvents.map((e): agentSessions.AgentMessage => ({ role: 'tool', content: `${e.name}: ${e.summary}`, toolName: e.name, ts: Date.now() })),
           { role: 'assistant', content: result.content, ts: Date.now() },
         ]);
-        if (!closed) send('done', { sessionId: session.id });
+        if (!closed) send('done', { sessionId: session.id, commits, commitCount: activity?.commitCount ?? commits.length });
       } catch (err: any) {
         if (!closed) send('error', { message: `AI request failed: ${err.message}` });
       }

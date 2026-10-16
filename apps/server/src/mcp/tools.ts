@@ -441,7 +441,7 @@ export function registerTools(server: McpServer, identity: McpIdentity, ctx: Too
       return fail(`No branch "${ctx.branch ?? ''}" in this project${branches.length ? ` — branches: ${branches.join(', ')}` : ''}`);
     }
     if (/project not found/i.test(msg)) return fail(projectNotFound(ctx.project ?? ''));
-    console.warn(`[aldine] mcp tool failed: ${msg}`);
+    console.warn(`[aldine] mcp tool failed: ${msg}`, err instanceof Error && err.stack ? `\n${err.stack}` : '');
     return fail('The request failed on the Aldine server');
   };
 

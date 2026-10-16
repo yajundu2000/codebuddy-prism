@@ -1058,7 +1058,7 @@ export default function Editor() {
               />
             )}
             {tab === 'history' && <HistoryPanel projectId={id} branch={branch} version={historyVersion} live={agentPresent} />}
-            {tab === 'chat' && <AssistantPanel id={id} />}
+            {tab === 'chat' && <AssistantPanel id={id} branch={branch} onAgentEdits={(commits, total) => { void openAgentReview(commits, total); }} />}
             {tab === 'review' && (
               <ReviewPanel
                 comments={comments}

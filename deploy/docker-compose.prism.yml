@@ -1,0 +1,66 @@
+# codebuddy-prism single-VPS deployment (1.12.226.86 — 2 cores / 1.9G RAM + swap).
+# Self-contained: the app image is built locally and shipped via
+# `docker save | ssh docker load` (the server is too small to build on), the
+# compiler is the upstream TeX Live full image through the NJU mirror.
+# Usage (on the server):  docker compose -f docker-compose.prism.yml --env-file .env up -d
+name: codebuddy-prism
+
+services:
+  app:
+    image: codebuddy-prism-app:${PRISM_VERSION:-0.1.0}
+    ports:
+      - "${PRISM_BIND:-0.0.0.0}:${PRISM_PORT:-8080}:3000"
+    environment:
+      DATA_DIR: /data
+      META_DIR: /secrets
+      COMPILER_URL: http://compiler:4020
+      AUTH_ENABLED: "1"
+      ALDINE_MCP: "1"
+      # Assistant panel: OpenAI-compatible endpoint, key server-side only.
+      # Default backend is Hunyuan; any compatible endpoint works.
+      PRISM_AI_API_KEY: ${PRISM_AI_API_KEY:-}
+      PRISM_AI_BASE_URL: ${PRISM_AI_BASE_URL:-https://api.hunyuan.cloud.tencent.com/v1}
+      PRISM_AI_MODELS: ${PRISM_AI_MODELS:-}
+    volumes:
+      - prism-data:/data
+      - prism-secrets:/secrets
+    networks:
+      - frontend
+      - backend
+    init: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  compiler:
+    # ghcr direct is ~100KB/s from CN; the NJU mirror is fast. -full = TeX Live
+    # full, required for CJK (ctex/Fandol).
+    image: ${PRISM_COMPILER_IMAGE:-ghcr.nju.edu.cn/trahloff/aldine-compiler:0.11.0-full}
+    volumes:
+      - prism-data:/data
+    networks:
+      - backend
+    # Host has 1.9G RAM + 4G swap; 1500m keeps one heavy xelatex run from
+    # pushing the app container out of physical memory.
+    mem_limit: 1500m
+    pids_limit: 256
+    cpus: 1.5
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges
+    init: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+networks:
+  frontend: {}
+  backend:
+    internal: true
+
+volumes:
+  prism-data:
+  prism-secrets:

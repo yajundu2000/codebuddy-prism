@@ -22,17 +22,19 @@
   --hairline: rgba(0, 0, 0, 0.10);
   --hairline-strong: rgba(0, 0, 0, 0.16);
 
-  --accent: #2e62e9;          /* ink blue */
-  --accent-hover: #2554cf;
-  --accent-fill: #2e62e9;     /* filled-button surface */
-  --accent-fill-hover: #2554cf;
-  --accent-soft: rgba(46, 98, 233, 0.10);
-  --selection: rgba(46, 98, 233, 0.22);
+  /* prism skin: the accent family is indigo — codebuddy-prism's identity.
+ *  The agent violet (--agent) stays reserved and distinct from it. */
+  --accent: #4f46e5;          /* indigo */
+  --accent-hover: #4338ca;
+  --accent-fill: #4f46e5;     /* filled-button surface */
+  --accent-fill-hover: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.10);
+  --selection: rgba(79, 70, 229, 0.22);
   --on-accent: #ffffff;
 
   /* syntax palette — calm, one family. Comments are core content in LaTeX
      (preambles, TODOs) — keep them readable, not decorative. */
-  --syn-command: #2456c8;
+  --syn-command: #4338ca;
   --syn-comment: #7a7a80;
   --syn-string: #7d5b34;
   --syn-value: #6e56cf;
@@ -103,17 +105,17 @@
   --hairline: rgba(255, 255, 255, 0.10);
   --hairline-strong: rgba(255, 255, 255, 0.18);
 
-  --accent: #5b8cff;
-  --accent-hover: #729cff;
-  /* fill surfaces carry white text — #3568ee clears 4.5:1, the lighter accents
-     don't, so hover goes darker here too (#4676f0 was 4.1:1) */
-  --accent-fill: #3568ee;
-  --accent-fill-hover: #2c5ce0;
-  --accent-soft: rgba(91, 140, 255, 0.16);
-  --selection: rgba(91, 140, 255, 0.30);
+  --accent: #818cf8;
+  --accent-hover: #98a1fa;
+  /* fill surfaces carry white text — #4f46e5 clears 4.5:1, the lighter accents
+     don't, so hover goes darker here too */
+  --accent-fill: #4f46e5;
+  --accent-fill-hover: #4338ca;
+  --accent-soft: rgba(129, 140, 248, 0.16);
+  --selection: rgba(129, 140, 248, 0.30);
   --on-accent: #ffffff;
 
-  --syn-command: #7aa2ff;
+  --syn-command: #8b93ff;
   --syn-comment: #84848e;
   --syn-string: #c9a35e;
   --syn-value: #b8a6ff;

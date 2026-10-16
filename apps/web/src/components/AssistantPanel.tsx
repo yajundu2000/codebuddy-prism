@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   aiStatus, agentChat, agentDeleteSession, agentSession, agentSessionList,
-  type AgentMessage, type AgentSessionInfo, type AiStatus,
+  type AgentCommitRef, type AgentMessage, type AgentSessionInfo, type AiStatus,
 } from '../api';
 import AssistantMessage from './AssistantMessage';
 
+interface Props {
+  id: string;
+  branch?: string;
+  /** Fires when a turn's tools made commits — the Editor opens its existing
+   *  agent-review dialog (diff + Keep/Undo) on top of the panel. */
+  onAgentEdits?(commits: AgentCommitRef[], total: number): void;
+}
+
 /**
  * AI writing assistant: streamed chat against the server-held key
- * (PRISM_AI_API_KEY — the browser never sees it), with a model picker and
- * per-project conversation list.
+ * (PRISM_AI_API_KEY — the browser never sees it), with a model picker,
+ * per-project conversations, and agent tool cards.
  */
-export default function AssistantPanel({ id }: { id: string }) {
+export default function AssistantPanel({ id, branch = 'main', onAgentEdits }: Props) {
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [sessions, setSessions] = useState<AgentSessionInfo[]>([]);
   const [sessionId, setSessionId] = useState<string>('');
@@ -55,19 +63,23 @@ export default function AssistantPanel({ id }: { id: string }) {
     setStreamText('');
     agentChat(
       id,
-      { sessionId: sessionId || undefined, message, model: model || undefined },
+      { sessionId: sessionId || undefined, message, model: model || undefined, branch },
       {
         onStart: (sid) => {
           if (!sessionId) setSessionId(sid);
         },
         onDelta: (text) => setStreamText((prev) => prev + text),
-        onDone: () => {
+        onTool: (event) => {
+          setMessages((prev) => [...prev, { role: 'tool', content: `${event.name}: ${event.summary}`, toolName: event.name, ts: Date.now() }]);
+        },
+        onDone: (commits, commitCount) => {
           setStreamText((text) => {
             setMessages((prev) => [...prev, { role: 'assistant', content: text, ts: Date.now() }]);
             return '';
           });
           setStreaming(false);
           refreshSessions();
+          if (commits.length && onAgentEdits) onAgentEdits(commits, commitCount);
         },
         onError: (msg) => {
           setError(msg);

@@ -7,7 +7,8 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/server/package.json apps/server/
-RUN npm ci --workspace apps/web --include-workspace-root=false
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN NPM_CONFIG_REGISTRY=${NPM_REGISTRY} npm ci --workspace apps/web --include-workspace-root=false
 COPY apps/web apps/web
 RUN npm run build -w apps/web
 
@@ -16,7 +17,8 @@ FROM --platform=$BUILDPLATFORM node:22-alpine AS serverbuild
 WORKDIR /build
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
-RUN npm ci --workspace apps/server --include-workspace-root=false
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN NPM_CONFIG_REGISTRY=${NPM_REGISTRY} npm ci --workspace apps/server --include-workspace-root=false
 COPY apps/server apps/server
 RUN npm run build -w apps/server
 
@@ -26,7 +28,8 @@ RUN apk add --no-cache git
 WORKDIR /srv
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
-RUN npm ci --workspace apps/server --include-workspace-root=false --omit=dev
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN NPM_CONFIG_REGISTRY=${NPM_REGISTRY} npm ci --workspace apps/server --include-workspace-root=false --omit=dev
 COPY apps/server apps/server
 COPY --from=serverbuild /build/apps/server/dist apps/server/dist
 COPY --from=serverbuild /build/apps/server/assets apps/server/assets

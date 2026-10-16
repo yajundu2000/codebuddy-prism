@@ -492,17 +492,21 @@ export async function agentDeleteSession(projectId: string, sid: string): Promis
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
+export interface AgentToolEvent { name: string; ok: boolean; summary: string }
+export interface AgentCommitRef { hash: string; message: string }
+
 export interface AgentChatHandlers {
   onStart?(sessionId: string, model: string): void;
   onDelta(text: string): void;
-  onDone(): void;
+  onTool?(event: AgentToolEvent): void;
+  onDone(commits: AgentCommitRef[], commitCount: number): void;
   onError(message: string): void;
 }
 
 /** One streamed chat turn: server SSE events (start/delta/done/error). */
 export async function agentChat(
   projectId: string,
-  body: { sessionId?: string; message: string; model?: string },
+  body: { sessionId?: string; message: string; model?: string; branch?: string },
   handlers: AgentChatHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -528,7 +532,8 @@ export async function agentChat(
     try { parsed = data ? JSON.parse(data) : {}; } catch { parsed = {}; }
     if (event === 'start') handlers.onStart?.(parsed.sessionId, parsed.model);
     else if (event === 'delta') handlers.onDelta(parsed.text || '');
-    else if (event === 'done') handlers.onDone();
+    else if (event === 'tool') handlers.onTool?.(parsed);
+    else if (event === 'done') handlers.onDone(parsed.commits || [], parsed.commitCount || 0);
     else if (event === 'error') handlers.onError(parsed.message || 'AI request failed');
     event = '';
     data = '';
