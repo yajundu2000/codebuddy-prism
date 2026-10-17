@@ -83,9 +83,11 @@ default silently shares the other checkout's mock.
   `latest` moves only in `promote.yml` after a human approves.
   `build-image.yml` tags the index by hand for that reason; if you ever swap
   in `docker/metadata-action`, set `flavor: latest=false` or it re-adds
-  `latest` for every release semver. `docker-compose.yml` pins
-  `${ALDINE_VERSION:-x.y.z}` on purpose. Do not "simplify" either back to
-  `latest`.
+  `latest` for every release semver. This fork ships no prebuilt app images:
+  `docker-compose.yml` builds the app from source and pins only the
+  UNMODIFIED upstream compiler (`ALDINE_COMPILER_VERSION`). `check-release-pins`
+  fails if a `${ALDINE_VERSION:-…}` self-pin comes back — do not "simplify"
+  the compose file into one.
 - `test:unit` discovers `apps/server/test/*.test.mjs`; never enumerate test
   files in package.json again (two branches adding tests conflicted on that
   line and the merge silently dropped one side's tests).

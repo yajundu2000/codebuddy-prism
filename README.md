@@ -135,67 +135,36 @@ Live collaboration, a recompile, and a SyncTeX jump, in one real recording (comp
 
 ## Quick start
 
-No clone, no build: save this as `docker-compose.yml` and run `docker compose up -d`:
+Clone and build: the app image is built on your machine from this source,
+and the compiler is the unmodified upstream Aldine TeX Live image:
 
-```yaml
-name: aldine
+    git clone https://github.com/yajundu2000/codebuddy-prism && cd codebuddy-prism
+    docker compose up -d --build
 
-services:
-  app:
-    image: ghcr.io/trahloff/aldine-app:${ALDINE_VERSION:-0.11.0}
-    ports:
-      - "8080:3000"
-    volumes:
-      - aldine-data:/data
-      - aldine-secrets:/secrets
-    networks: [frontend, backend]
-    init: true
-    restart: unless-stopped
-
-  compiler:
-    image: ghcr.io/trahloff/aldine-compiler:${ALDINE_VERSION:-0.11.0}${ALDINE_TEXLIVE:-}
-    volumes:
-      - aldine-data:/data
-    # The compiler runs untrusted LaTeX. Keep this block.
-    networks: [backend]
-    mem_limit: 2g
-    pids_limit: 256
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges]
-    init: true
-    restart: unless-stopped
-
-networks:
-  frontend: {}
-  backend:
-    internal: true # no route to the internet
-
-volumes:
-  aldine-data:
-  aldine-secrets:
-```
+On networks where docker.io or npmjs.org are slow, pass build args:
+`NPM_REGISTRY=https://registry.npmmirror.com` and
+`NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine`.
 
 Open http://localhost:8080. That's it. Projects live in the `aldine-data`
-volume, and everything else (auth, SSO, AI fix, email) is opt-in via
-environment variables when you want it.
+volume, and everything else (auth, SSO, AI assistant, email) is opt-in via
+environment variables when you want it. The repo-root `docker-compose.yml`
+is exactly what you just built; keep its `name: codebuddy-prism` line
+wherever you copy it, because it fixes the volume names — that is what lets
+you switch compose files later and what `deploy/backup.sh` looks for.
 
-That is equivalent to the repo-root `docker-compose.yml` (same services,
-images and sandbox settings), so a clone works identically: `git clone https://github.com/trahloff/Aldine && cd Aldine &&
-docker compose up -d`. Keep the `name: aldine` line wherever you save it: it
-fixes the volume names, which is what lets you switch compose files later and
-what `deploy/backup.sh` looks for.
+- **The compiler is a pinned upstream image.** `ALDINE_COMPILER_VERSION`
+  (default 0.11.0) selects it. It is the unmodified Aldine compiler — a
+  sandboxed TeX Live wrapper — so its version moves independently of this
+  project's releases.
+- **CJK documents need TeX Live full.** The default compiler scheme lacks
+  ctex/Fandol; pull the full variant (about 9 GB on disk) with
+  `ALDINE_TEXLIVE=-full docker compose pull compiler && docker compose up -d`.
+- **Upgrading.** Read the [CHANGELOG](CHANGELOG.md), back up
+  (`deploy/backup.sh`), then `git pull && docker compose up -d --build`: the
+  app image is rebuilt from the new source while your projects stay in the
+  `aldine-data` and `aldine-secrets` volumes, which a rebuild never touches.
+  To roll back, check out the previous tag and run the same command.
 
-- **You are pinned to a version.** The block above says
-  `${ALDINE_VERSION:-0.11.0}`, so a fresh copy installs the current release and
-  nothing under a running install changes on its own. To upgrade, read the
-  [CHANGELOG](CHANGELOG.md), back up (`deploy/backup.sh`), then:
-
-      ALDINE_VERSION=<new version> docker compose pull && docker compose up -d
-
-  To roll back, set `ALDINE_VERSION` to the previous release and run the same
-  command. Your projects live in the `aldine-data` and `aldine-secrets`
-  volumes and an image swap does not touch them. `:latest` still exists and
-  points at the newest release; pinning is what lets you choose when to move.
 - **Pre-1.0 stability.** Versions follow SemVer with one caveat: before 1.0
   a minor bump (0.3 to 0.4) may change behaviour or on-disk layout, a patch
   bump (0.4.0 to 0.4.1) will not. Every release is built from a commit that
@@ -229,11 +198,11 @@ what `deploy/backup.sh` looks for.
             FROM ghcr.io/trahloff/aldine-compiler:0.11.0
             RUN tlmgr install pgfplots tikz-cd
     ```
-    Bump the `FROM` tag when you bump `ALDINE_VERSION`. Compose builds the
+    Bump the `FROM` tag when you bump `ALDINE_COMPILER_VERSION`. Compose builds the
     image on your machine, so this works for `arm64` servers as well.
   - Get everything. Every release from 0.4.0 also ships all of TeX Live as
     `-full` (about 2.8 GB compressed, 9 GB on disk; CJK is only here). Add
-    `ALDINE_TEXLIVE=-full` next to `ALDINE_VERSION` and pull again.
+    `ALDINE_TEXLIVE=-full` next to `ALDINE_COMPILER_VERSION` and pull again.
 - **Port 8080 taken?** Change the left side of `ports:`; with
   `docker-compose.full.yml`, set `ALDINE_PORT=8081` in `.env` instead.
 - **Everything beyond the minimum**: building from source (latest `main`,

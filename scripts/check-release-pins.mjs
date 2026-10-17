@@ -2,10 +2,12 @@
 // Every place that names the release version must agree, because none of them
 // is generated from another:
 //   - package.json "version" at the root and in both workspaces
-//   - the ${ALDINE_VERSION:-x.y.z} default in docker-compose.yml, which is what
-//     a fresh `docker compose up` pulls
-//   - the same default in the README's copy-paste block (documented as the
-//     compose file "verbatim")
+// This fork ships no prebuilt app images: docker-compose.yml builds the app
+// from source and pulls the UNMODIFIED upstream compiler under its own
+// variable (ALDINE_COMPILER_VERSION), so there is no self-pin that could
+// drift. The second half of the gate is therefore inverted — it fails if
+// anyone reintroduces a ${ALDINE_VERSION:-…} self-image pin into the compose
+// file or the README's quick start.
 // With --tag vX.Y.Z (the release preflight) the tag must match too, and the
 // CHANGELOG must already carry a "## [X.Y.Z]" heading.
 import { readFileSync } from 'node:fs';
@@ -24,22 +26,19 @@ found.push(['package.json', version('package.json')]);
 found.push(['apps/server/package.json', version('apps/server/package.json')]);
 found.push(['apps/web/package.json', version('apps/web/package.json')]);
 
-const pin = /aldine-(app|compiler):\$\{ALDINE_VERSION:-([^}]+)\}/g;
+const problems = [];
+const expected = found[0][1];
+for (const [where, v] of found.slice(1)) if (v !== expected) problems.push(`${where}: ${v} (expected ${expected})`);
+
+// No self-image pins: the app is built from source, the compiler is upstream's.
 for (const file of ['docker-compose.yml', 'README.md']) {
   const text = read(file);
-  const seen = new Set();
-  for (const m of text.matchAll(pin)) {
-    if (seen.has(m[1])) continue;
-    seen.add(m[1]);
-    found.push([`${file} (${m[1]})`, m[2]]);
-  }
-  for (const image of ['app', 'compiler']) {
-    if (!seen.has(image)) found.push([`${file} (${image})`, `<no ${'${ALDINE_VERSION:-…}'} default>`]);
-  }
+  const stale = text.match(/\$\{ALDINE_VERSION:-[^}]*\}/g);
+  if (stale) problems.push(`${file}: reintroduces a self-image pin (${stale[0]}) — the app builds from source, the compiler pins ALDINE_COMPILER_VERSION`);
 }
-
-const expected = found[0][1];
-const problems = found.filter(([, v]) => v !== expected).map(([where, v]) => `${where}: ${v}`);
+if (!/ALDINE_COMPILER_VERSION:-\d/.test(read('docker-compose.yml'))) {
+  problems.push('docker-compose.yml: compiler image lost its ALDINE_COMPILER_VERSION pin');
+}
 
 if (tag) {
   const m = /^v(\d+\.\d+\.\d+)$/.exec(tag);
@@ -49,9 +48,9 @@ if (tag) {
 }
 
 if (problems.length) {
-  console.error(`check-release-pins: expected every pin to be ${expected} (from package.json), but:`);
+  console.error('check-release-pins:');
   for (const p of problems) console.error(`  - ${p}`);
-  console.error('Fix: npm pkg set version=X.Y.Z --workspaces --include-workspace-root, then update the compose default and the README block.');
+  console.error('Fix: npm pkg set version=X.Y.Z --workspaces --include-workspace-root; keep compose building the app from source.');
   process.exit(1);
 }
-console.log(`check-release-pins: all ${found.length} pins say ${expected}${tag ? `, tag ${tag} matches` : ''}`);
+console.log(`check-release-pins: all ${found.length} package versions say ${expected}${tag ? `, tag ${tag} matches` : ''}; no self-image pins`);

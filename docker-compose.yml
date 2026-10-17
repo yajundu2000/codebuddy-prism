@@ -1,12 +1,22 @@
-# Minimal Aldine: prebuilt images, two services, done. This is all you need.
-# Everything else (building from source, auth/SSO/AI/email options, TLS,
-# Postgres/Redis) lives in docker-compose.full.yml. Both files share the same
-# project name and volumes, so you can switch between them without losing data.
-name: aldine
+# Minimal codebuddy-prism: the app builds from source, the compiler is the
+# UNMODIFIED upstream Aldine image (a TeX Live wrapper whose version is its
+# own: ALDINE_COMPILER_VERSION, plus ALDINE_TEXLIVE=-full for CJK). Everything
+# else — auth/SSO/AI/email options, TLS, Postgres/Redis — lives in
+# docker-compose.full.yml. Both files share the same project name and
+# volumes, so you can switch between them without losing data.
+name: codebuddy-prism
 
 services:
   app:
-    image: ghcr.io/trahloff/aldine-app:${ALDINE_VERSION:-0.11.0}
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      args:
+        # CN builds: NPM_REGISTRY=https://registry.npmmirror.com and
+        # NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        NODE_IMAGE: ${NODE_IMAGE:-docker.io/library/node:22-alpine}
+    image: codebuddy-prism-app:${PRISM_VERSION:-dev}
     ports:
       - "8080:3000"
     volumes:
@@ -19,7 +29,7 @@ services:
     restart: unless-stopped
 
   compiler:
-    image: ghcr.io/trahloff/aldine-compiler:${ALDINE_VERSION:-0.11.0}${ALDINE_TEXLIVE:-}
+    image: ghcr.io/trahloff/aldine-compiler:${ALDINE_COMPILER_VERSION:-0.11.0}${ALDINE_TEXLIVE:-}
     volumes:
       - aldine-data:/data
     # Hardening: no external egress (internal network), drop all Linux caps, no
