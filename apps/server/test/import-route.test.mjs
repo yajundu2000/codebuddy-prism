@@ -177,7 +177,7 @@ try {
   res = await app.inject({ method: 'PATCH', url: `/api/projects/${id}`, payload: { engine: 'latex' } });
   eq(res.statusCode, 400, 'unknown engine → 400');
   check(res.json().error.includes('latex') && res.json().error.includes('lualatex'), `error names the engine and the options: ${res.json().error}`);
-  eq((await store.readMeta(id)).engine, 'pdf', 'engine unchanged after a rejected value');
+  eq((await store.readMeta(id)).engine, 'xelatex', 'engine unchanged after a rejected value');
   res = await app.inject({ method: 'PATCH', url: `/api/projects/${id}`, payload: { engine: '' } });
   eq(res.statusCode, 400, 'empty engine → 400');
   res = await app.inject({ method: 'PATCH', url: `/api/projects/${id}`, payload: { engine: 'xelatex' } });
@@ -200,8 +200,8 @@ try {
   eq(res.json().import.engineReason, 'the xepersian package in the main document', 'reason names the package');
 
   res = await importZip({ 'main.tex': doc });
-  eq(res.json().engine, 'pdf', 'plain archive stays on pdflatex');
-  eq(res.json().import, { engine: 'pdf', engineReason: null, transcoded: [] }, 'nothing to explain');
+  eq(res.json().engine, 'xelatex', 'plain archive takes the default engine');
+  eq(res.json().import, { engine: 'xelatex', engineReason: null, transcoded: [] }, 'nothing to explain');
 
   const latin1Doc = Buffer.concat([Buffer.from('\\documentclass{article}\n\\usepackage[latin1]{inputenc}\n\\begin{document}\ncaf'), Buffer.from([0xe9]), Buffer.from('\n\\end{document}\n')]);
   res = await importZip({ 'main.tex': latin1Doc, 'notes.txt': 'plain ascii' });

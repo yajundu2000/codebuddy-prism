@@ -24,6 +24,11 @@ First release of codebuddy-prism, a fork of Aldine.
 
 ## [Unreleased]
 
+### Changed
+- XeLaTeX is the default typesetting engine: new projects, hint-less imports
+  and remote clones start on it, and it leads the engine picker (CJK documents
+  fail obscurely under pdfLaTeX; everything pdfLaTeX builds, XeLaTeX builds).
+
 ### Added
 - The divider between editor and preview can be dragged with a finger or a
   pen, moved with the arrow keys (Shift for larger steps) and reset with a

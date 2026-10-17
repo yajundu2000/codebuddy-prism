@@ -1,9 +1,11 @@
 import type { CompilerInfo, ImportedProject } from '../api';
 
-/** The engines the server accepts (PATCH rejects anything else with 400). */
+/** The engines the server accepts (PATCH rejects anything else with 400).
+ *  Order is the picker's order: XeLaTeX leads because it is the platform
+ *  default (CJK-safe); the rest follow. */
 export const ENGINES: Array<{ id: string; label: string }> = [
-  { id: 'pdf', label: 'pdfLaTeX' },
   { id: 'xelatex', label: 'XeLaTeX' },
+  { id: 'pdf', label: 'pdfLaTeX' },
   { id: 'lualatex', label: 'LuaLaTeX' },
 ];
 

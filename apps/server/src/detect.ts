@@ -81,7 +81,7 @@ export function engineFromLatexmkrc(text: string): Engine | null {
   return null;
 }
 
-/** Engine the root file's preamble requires, or null when pdflatex would do. */
+/** Engine the root file's preamble requires, or null when nothing pins one. */
 export function engineFromSource(text: string): { engine: Engine; reason: string } | null {
   const magic = text.match(MAGIC_RE);
   if (magic) {
@@ -107,14 +107,17 @@ export function detectEngine(files: Record<string, Buffer>, root: string | undef
     .sort((a, b) => Number(!a.startsWith(rootDir)) - Number(!b.startsWith(rootDir)) || a.split('/').length - b.split('/').length || a.localeCompare(b));
   for (const rc of rcs) {
     const engine = engineFromLatexmkrc(files[rc].toString('utf8'));
-    if (engine) return { engine, reason: engine === 'pdf' ? null : `${rc} in the archive` };
+    // An explicit rc choice is a choice even when it names the non-default
+    // engine — the import toast says where the decision came from.
+    if (engine) return { engine, reason: `${rc} in the archive` };
   }
   if (root && files[root]) {
     const head = files[root].toString('utf8', 0, Math.min(files[root].length, SNIFF_BYTES));
     const found = engineFromSource(head);
     if (found) return found;
   }
-  return { engine: 'pdf', reason: null };
+  // Nothing asked: the platform default (store.createProject) is XeLaTeX.
+  return { engine: 'xelatex', reason: null };
 }
 
 const utf8Strict = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });

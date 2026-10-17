@@ -42,7 +42,7 @@ export default function ProjectSettings({ project, branch, files, autoTypeset, i
   // A root that is not in the tree (deleted on this branch, or not a .tex
   // file) must still be selectable, or the select would show the wrong file.
   const rootOptions = texFiles.includes(project.rootFile) ? texFiles : [project.rootFile, ...texFiles];
-  const engine = ENGINES.some((e) => e.id === project.engine) ? project.engine : 'pdf';
+  const engine = ENGINES.some((e) => e.id === project.engine) ? project.engine : 'xelatex';
 
   // Escape unmounts the dialog without a blur, so the close path commits too;
   // the ref keeps blur-then-close from sending the same rename twice.

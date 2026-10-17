@@ -89,7 +89,7 @@ test.describe('engine detection on import', () => {
       id = await importFile(page, file, stem, 'main.tex was not UTF-8 and has been transcoded');
       await expect(page.locator('.cm-content')).toContainText('LATIN1-BODY café');
       await expect(page.locator('.cm-content')).toContainText('[utf8]{inputenc}');
-      expect((await meta(request, id)).engine).toBe('pdf');
+      expect((await meta(request, id)).engine).toBe('xelatex');
     } finally {
       if (id) await cleanup(request, id);
       fs.rmSync(dir, { recursive: true, force: true });

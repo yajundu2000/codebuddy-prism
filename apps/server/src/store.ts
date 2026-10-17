@@ -103,7 +103,9 @@ export async function createProject(name: string, files?: Record<string, string 
   }
 
   const rootFile = written.includes('main.tex') ? 'main.tex' : written.find((f) => f.endsWith('.tex')) || '';
-  const meta: ProjectMeta = { id, name, rootFile, engine: 'pdf', createdAt: new Date().toISOString() };
+  // XeLaTeX is the platform default: CJK documents fail obscurely under
+  // pdflatex, and everything pdflatex builds, xelatex builds too.
+  const meta: ProjectMeta = { id, name, rootFile, engine: 'xelatex', createdAt: new Date().toISOString() };
   if (ownerId) { meta.ownerId = ownerId; meta.share = { mode: 'private', collaborators: [] }; }
   if (opts.createdVia) meta.createdVia = opts.createdVia;
   await writeMeta(meta);

@@ -1597,7 +1597,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       const { remoteBranch } = await gitops.cloneRepo(id, p.tokenUrl(info.cloneUrl, conn.token, conn.login));
       const rootFile = detectRoot(id, 'main');
       const meta: store.ProjectMeta = {
-        id, name: info.name, rootFile, engine: 'pdf', createdAt: new Date().toISOString(),
+        id, name: info.name, rootFile, engine: 'xelatex', createdAt: new Date().toISOString(),
         remote: { provider: p.id, fullName: info.fullName, owner: info.owner, repo: info.name, remoteBranch, cloneUrl: info.cloneUrl, ...(conn.baseUrl ? { baseUrl: conn.baseUrl } : {}), connectedBy: remoteUserId(req) },
       };
       const ownerId = reqUser(req)?.id;

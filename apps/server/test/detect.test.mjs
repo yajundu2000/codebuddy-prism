@@ -57,11 +57,11 @@ eq(detectEngine({ 'latexmkrc': B('$pdf_mode = 4;'), 'paper/latexmkrc': B('$pdf_m
 eq(detectEngine({ 'latexmkrc': B('$bibtex_use = 2;'), 'main.tex': B(doc('\\usepackage{xepersian}\n')) }, 'main.tex'), { engine: 'xelatex', reason: 'the xepersian package in the main document' }, 'silent latexmkrc falls through to the root');
 eq(detectEngine({ 'latexmkrc': B("$pdflatex = 'pdflatex -synctex=1 %O %S';"), 'main.tex': B(doc('\\usepackage{xepersian}\n')) }, 'main.tex'), { engine: 'xelatex', reason: 'the xepersian package in the main document' }, 'a flags-only $pdflatex line does not override a root that needs XeLaTeX');
 eq(detectEngine({ 'latexmkrc': B(allThree), 'main.tex': B(doc('\\usepackage{xepersian}\n')) }, 'main.tex'), { engine: 'xelatex', reason: 'the xepersian package in the main document' }, 'an rc that flags all three engines leaves the root to decide');
-eq(detectEngine({ 'latexmkrc': B(allThree), 'main.tex': B(doc()) }, 'main.tex'), { engine: 'pdf', reason: null }, 'and a plain root under it stays on pdflatex');
-eq(detectEngine({ 'latexmkrc': B('$pdf_mode = 1;'), 'main.tex': B(doc('\\usepackage{fontspec}\n')) }, 'main.tex'), { engine: 'pdf', reason: null }, 'explicit $pdf_mode 1 overrides the sniff, with no reason to report');
-eq(detectEngine({ 'main.tex': B(doc()) }, 'main.tex'), { engine: 'pdf', reason: null }, 'default');
-eq(detectEngine({ 'chapter.tex': B('\\usepackage{fontspec}') }, undefined), { engine: 'pdf', reason: null }, 'no root: nothing to sniff');
-eq(detectEngine({ 'main.tex': B('%'.repeat(300 * 1024) + '\n' + doc('\\usepackage{fontspec}\n')) }, 'main.tex').engine, 'pdf', 'a preamble past the scan window is not seen');
+eq(detectEngine({ 'latexmkrc': B(allThree), 'main.tex': B(doc()) }, 'main.tex'), { engine: 'xelatex', reason: null }, 'and a plain root under it falls to the default engine');
+eq(detectEngine({ 'latexmkrc': B('$pdf_mode = 1;'), 'main.tex': B(doc('\\usepackage{fontspec}\n')) }, 'main.tex'), { engine: 'pdf', reason: 'latexmkrc in the archive' }, 'explicit $pdf_mode 1 overrides the sniff and is reported as the reason');
+eq(detectEngine({ 'main.tex': B(doc()) }, 'main.tex'), { engine: 'xelatex', reason: null }, 'default is XeLaTeX');
+eq(detectEngine({ 'chapter.tex': B('\\usepackage{fontspec}') }, undefined), { engine: 'xelatex', reason: null }, 'no root: nothing to sniff, default applies');
+eq(detectEngine({ 'main.tex': B('%'.repeat(300 * 1024) + '\n' + doc('\\usepackage{fontspec}\n')) }, 'main.tex').engine, 'xelatex', 'a preamble past the scan window is not seen, default applies');
 
 // ---- decoding ----
 eq(decodeText(B('caf\u00e9')), { text: 'café', transcoded: false }, 'valid UTF-8 passes through');

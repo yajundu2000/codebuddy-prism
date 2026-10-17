@@ -22,7 +22,7 @@ test.describe('engine picker', () => {
     try {
       await openProject(page, id);
       const sel = page.getByTestId('engine-select');
-      await expect(sel).toHaveValue('pdf');
+      await expect(sel).toHaveValue('xelatex');
       await sel.selectOption('xelatex');
       await expect.poll(() => engineOf(request, id)).toBe('xelatex');
       await expect(sel).toHaveValue('xelatex');
@@ -45,7 +45,7 @@ test.describe('engine picker', () => {
       const res = await request.patch(`/api/projects/${id}`, { data: { engine: 'latex' } });
       expect(res.status()).toBe(400);
       expect((await res.json()).error).toContain('Unknown engine');
-      expect(await engineOf(request, id)).toBe('pdf');
+      expect(await engineOf(request, id)).toBe('xelatex');
     } finally { await cleanup(request, id); }
   });
 });

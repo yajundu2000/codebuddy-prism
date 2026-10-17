@@ -301,6 +301,10 @@ test.describe('MCP App PDF viewer', () => {
     const id = await createProject(request, 'Viewer Stale');
     const client = await connect();
     try {
+      // The late-half removal this scenario asserts is pdflatex behaviour:
+      // XeLaTeX (the platform default) keeps the previous run's PDF on a
+      // late halt, which is the opposite of what is under test here.
+      await request.patch(`/api/projects/${id}`, { data: { engine: 'pdf' } });
       await request.put(`/api/projects/${id}/file`, { data: { branch: 'main', path: 'main.tex', content: TWO_PAGES } });
       const good = await call(client, 'compile', { project: id });
       expect(good.body.ok).toBe(true);

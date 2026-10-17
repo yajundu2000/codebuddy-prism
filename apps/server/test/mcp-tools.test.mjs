@@ -294,7 +294,7 @@ check(/only your own/i.test(desc.commit) && /batch_write/.test(desc.commit) && !
 let { body } = await call('list_projects');
 check(body.length === 2 && body.some((p) => p.id === p1.id) && body.some((p) => p.id === p2.id), 'list_projects lists both projects');
 const listedP1 = body.find((p) => p.id === p1.id);
-check(listedP1.branches.includes('main') && listedP1.rootFile === 'main.tex' && listedP1.engine === 'pdf', 'list_projects carries branches/rootFile/engine');
+check(listedP1.branches.includes('main') && listedP1.rootFile === 'main.tex' && listedP1.engine === 'xelatex', 'list_projects carries branches/rootFile/engine');
 
 // project_structure
 ({ body } = await call('project_structure', { project: p1.id }));
@@ -704,7 +704,7 @@ check(body.rootFile === 'main.tex' && typeof body.files['main.tex'] === 'number'
 // create_project: unscoped token creates (blank and from a template); the
 // new project is owned by the token's user and reachable through the tools
 ({ body } = await call('create_project', { name: 'Fresh paper' }));
-check(typeof body.id === 'string' && body.name === 'Fresh paper' && body.rootFile === 'main.tex' && body.engine === 'pdf', `create_project returns the new project (got ${JSON.stringify(body)})`);
+check(typeof body.id === 'string' && body.name === 'Fresh paper' && body.rootFile === 'main.tex' && body.engine === 'xelatex', `create_project returns the new project (got ${JSON.stringify(body)})`);
 check(body.branch === 'main' && typeof body.head === 'string' && body.head.length >= 4, 'create_project echoes {branch, head} of the initial commit');
 check(body.contentVersion === 0 && JSON.stringify(body.files) === JSON.stringify(['main.tex', 'references.bib']), `create_project returns contentVersion and the seeded files (got ${JSON.stringify({ contentVersion: body.contentVersion, files: body.files })})`);
 // trash_project: only what the agent made is within its reach, and only as
