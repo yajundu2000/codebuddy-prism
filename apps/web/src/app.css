@@ -516,6 +516,34 @@
 .toolbar__spacer { flex: 1; }
 .toolbar__group { display: flex; align-items: center; gap: 6px; }
 
+.layout-toggle-wrap { position: relative; }
+.layout-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.layout-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  font-size: var(--text-m);
+  cursor: pointer;
+  user-select: none;
+}
+.layout-menu__item:hover { background: var(--bg-inset); }
+.layout-menu__item input { accent-color: var(--accent); }
+
 .branch-pill {
   display: inline-flex;
   align-items: center;

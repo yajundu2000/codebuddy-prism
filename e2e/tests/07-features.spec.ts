@@ -206,4 +206,49 @@ test.describe('cite-from-search (OpenAlex)', () => {
       await cleanup(request, id);
     }
   });
+
+  test('Layout menu toggles the PDF and sidebar panes and persists', async ({ page, request }) => {
+    const id = await createProject(request, 'Layout Menu');
+    try {
+      await openProject(page, id);
+      await expect(page.getByTestId('editor-shell')).toBeVisible();
+      const editorWidth = () => page.locator('main.pane--editor').boundingBox();
+
+      // both panes start visible on desktop
+      await expect(page.locator('.pane--preview')).toBeVisible();
+      await expect(page.getByTestId('sidebar')).toBeVisible();
+
+      // hide the PDF pane: the pane and its resizer go, the editor widens
+      await page.getByTestId('layout-toggle').click();
+      await expect(page.getByTestId('layout-menu')).toBeVisible();
+      await page.getByTestId('layout-opt-pdf').uncheck();
+      await expect(page.locator('.pane--preview')).toBeHidden();
+      await expect(page.getByTestId('pane-resizer')).toBeHidden();
+      await expect(page.getByTestId('jump-to-pdf')).toBeHidden();
+      const wide = await editorWidth();
+
+      // hide the sidebar too: only the editor remains
+      await page.getByTestId('layout-opt-sidebar').uncheck();
+      await expect(page.getByTestId('sidebar')).toBeHidden();
+      const only = await editorWidth();
+      expect(only!.width).toBeGreaterThan(wide!.width);
+
+      // the choice survives a reload
+      await page.reload();
+      await expect(page.locator('.cm-content')).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.pane--preview')).toBeHidden();
+      await expect(page.getByTestId('sidebar')).toBeHidden();
+
+      // and comes back
+      await page.getByTestId('layout-toggle').click();
+      await page.getByTestId('layout-opt-pdf').check();
+      await page.getByTestId('layout-opt-sidebar').check();
+      await expect(page.locator('.pane--preview')).toBeVisible();
+      await expect(page.getByTestId('sidebar')).toBeVisible();
+      expect((await editorWidth())!.width).toBeLessThan(only!.width);
+    } finally {
+      await page.evaluate(() => window.localStorage.removeItem('aldine.layout')).catch(() => {});
+      await cleanup(request, id);
+    }
+  });
 });

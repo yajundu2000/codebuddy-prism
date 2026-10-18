@@ -30,6 +30,9 @@ First release of codebuddy-prism, a fork of Aldine.
   fail obscurely under pdfLaTeX; everything pdfLaTeX builds, XeLaTeX builds).
 
 ### Added
+- A Layout menu in the editor toolbar toggles the PDF preview and the
+  sidebar independently (both can be off for a full-width editor); the
+  choice is kept in `aldine.layout` and restored on the next visit.
 - The divider between editor and preview can be dragged with a finger or a
   pen, moved with the arrow keys (Shift for larger steps) and reset with a
   double-click.

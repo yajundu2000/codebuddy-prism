@@ -123,6 +123,34 @@ export default function Editor() {
   // Phones show the sidebar as an overlay; a deep link to a line collapses
   // it so the flagged line is on screen, and the toolbar button restores it.
   const [sidebarHidden, setSidebarHidden] = useState(false);
+  // Which panes the editor shows. The phone overlay keeps its own
+  // sidebarHidden collapse; this is the desktop choice, persisted like the
+  // other aldine.* UI prefs.
+  const [layout, setLayout] = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem('aldine.layout') || 'null');
+      if (v && typeof v.pdf === 'boolean' && typeof v.sidebar === 'boolean') return v as { pdf: boolean; sidebar: boolean };
+    } catch { /* malformed pref falls back to the three-pane default */ }
+    return { pdf: true, sidebar: true };
+  });
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  const setPane = (k: 'pdf' | 'sidebar', on: boolean) => setLayout((l) => {
+    const next = { ...l, [k]: on };
+    localStorage.setItem('aldine.layout', JSON.stringify(next));
+    return next;
+  });
+  const layoutWrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!layoutMenuOpen) return;
+    const close = (e: Event) => {
+      if (e instanceof PointerEvent && layoutWrapRef.current?.contains(e.target as Node)) return;
+      setLayoutMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLayoutMenuOpen(false); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', onKey); };
+  }, [layoutMenuOpen]);
   const [spellcheck, setSpellcheck] = useState(() => localStorage.getItem('aldine.spellcheck') === '1');
   // Visual mode is gated by an experimental flag until it graduates.
   const visualEnabled = localStorage.getItem('aldine.experimental.visualEditor') === '1';
@@ -825,7 +853,7 @@ export default function Editor() {
     refreshProject: loadProject,
     compile: doCompile,
     toast,
-  }), [id, branch, activeFile, compile.result, insertAtCursor, loadFiles, loadProject, doCompile, toast]);
+  }), [id, branch, activeFile, compile.result, layout, insertAtCursor, loadFiles, loadProject, doCompile, toast]);
 
   const commands: Command[] = useMemo(() => {
     const cmds: Command[] = [
@@ -836,6 +864,8 @@ export default function Editor() {
       { id: 'stop-on-error', group: 'Action', title: project?.stopOnFirstError ? 'Stop on first error: on' : 'Stop on first error: off', run: () => setStopOnFirstError(!project?.stopOnFirstError) },
       { id: 'spell', group: 'Action', title: spellcheck ? 'Turn spellcheck off' : 'Turn spellcheck on', run: () => setSpellcheck((s) => { localStorage.setItem('aldine.spellcheck', s ? '0' : '1'); return !s; }) },
       { id: 'theme', group: 'View', title: 'Toggle light/dark theme', run: () => { toggleTheme(); } },
+      { id: 'layout-pdf', group: 'View', title: layout.pdf ? 'Hide the PDF pane' : 'Show the PDF pane', run: () => { setPane('pdf', !layout.pdf); } },
+      { id: 'layout-sidebar', group: 'View', title: layout.sidebar ? 'Hide the sidebar' : 'Show the sidebar', run: () => { setPane('sidebar', !layout.sidebar); } },
       { id: 'settings', group: 'View', title: 'Project settings: compiler, main document, TeX Live', run: () => setSettingsOpen(true) },
       { id: 'download-zip', group: 'File', title: `Download the project source as ZIP (${branch})`, run: () => { window.location.assign(api.archiveUrl(id, branch)); } },
       { id: 'about', group: 'View', title: 'About Aldine and its source code', run: () => setAboutOpen(true) },
@@ -968,6 +998,30 @@ export default function Editor() {
         <button className="btn btn--ghost sidebar-toggle" onClick={() => setSidebarHidden((h) => !h)} aria-pressed={!sidebarHidden} data-testid="sidebar-toggle" title="Show or hide the file tree">
           {sidebarHidden ? 'Files' : 'Hide files'}
         </button>
+        <div className="layout-toggle-wrap" ref={layoutWrapRef}>
+          <button
+            className="btn btn--ghost"
+            onClick={() => setLayoutMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={layoutMenuOpen}
+            data-testid="layout-toggle"
+            title="Choose which panes to show"
+          >
+            Layout
+          </button>
+          {layoutMenuOpen && (
+            <div className="layout-menu" role="menu" data-testid="layout-menu">
+              <label className="layout-menu__item" role="menuitemcheckbox" aria-checked={layout.pdf}>
+                <input type="checkbox" checked={layout.pdf} onChange={(e) => setPane('pdf', e.target.checked)} data-testid="layout-opt-pdf" />
+                PDF preview
+              </label>
+              <label className="layout-menu__item" role="menuitemcheckbox" aria-checked={layout.sidebar}>
+                <input type="checkbox" checked={layout.sidebar} onChange={(e) => setPane('sidebar', e.target.checked)} data-testid="layout-opt-sidebar" />
+                Sidebar
+              </label>
+            </div>
+          )}
+        </div>
         <div className="toolbar__group">
           <button
             className="btn btn--primary"
@@ -990,6 +1044,7 @@ export default function Editor() {
       )}
 
       <div className={`workspace${resizing ? ' workspace--resizing' : ''}`}>
+        {layout.sidebar && (
         <aside className={`pane sidebar${sidebarHidden ? ' sidebar--hidden' : ''}`} data-testid="sidebar">
           <div className="sidebar__tabs" role="tablist">
             <button className={`sidebar__tab ${tab === 'files' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('files')} role="tab" data-testid="tab-files">Files</button>
@@ -1075,6 +1130,7 @@ export default function Editor() {
             ))}
           </div>
         </aside>
+        )}
 
         <main className="pane pane--editor" style={{ flex: 1 }}>
           {activeFile ? (
@@ -1083,14 +1139,16 @@ export default function Editor() {
                 <span className="statusbar__file" data-testid="active-file">{activeFile}</span>
                 {visualEnabled && mode === 'visual' && <FormatToolbar target={codeRef} />}
                 <span className="toolbar__spacer" />
-                <button
-                  className="btn btn--ghost btn--small"
-                  onClick={() => jumpToPdf()}
-                  title={`Show this line in the PDF (${shortcut('J')})`}
-                  data-testid="jump-to-pdf"
-                >
-                  Jump to PDF <span className="kbd">{shortcut('J')}</span>
-                </button>
+                {layout.pdf && (
+                  <button
+                    className="btn btn--ghost btn--small"
+                    onClick={() => jumpToPdf()}
+                    title={`Show this line in the PDF (${shortcut('J')})`}
+                    data-testid="jump-to-pdf"
+                  >
+                    Jump to PDF <span className="kbd">{shortcut('J')}</span>
+                  </button>
+                )}
                 {(() => {
                   // document total with the open file's count kept live; a file
                   // outside the include graph falls back to its own count
@@ -1191,6 +1249,7 @@ export default function Editor() {
           )}
         </main>
 
+        {layout.pdf && (<>
         <div
           className={`resizer${resizing ? ' resizer--drag' : ''}`}
           role="separator"
@@ -1296,6 +1355,7 @@ export default function Editor() {
             onInverse={onPdfInverse}
           />
         </section>
+        </>)}
       </div>
 
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
