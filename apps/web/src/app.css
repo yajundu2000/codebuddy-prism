@@ -409,24 +409,89 @@
 
 /* user chip on home */
 .user-chip { display: inline-flex; align-items: center; gap: 8px; }
+.user-chip__avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: var(--text-s); flex: none;
+}
+
+/* ---------- brand lockup (header, login, consent, admin) ---------- */
+
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand__mark {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  background: var(--accent-fill); color: var(--on-accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), var(--shadow-card);
+}
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.brand__name em { font-style: normal; color: var(--accent); }
+.brand--big .brand__name { font-size: var(--text-3xl); }
 
 /* ---------- home ---------- */
 
 .home {
   min-height: 100%;
-  padding: 48px 24px 80px;
+  padding: 40px 24px 72px;
 }
 .home--drag { outline: 2px dashed var(--accent); outline-offset: -12px; background: var(--accent-soft); }
-.home__inner { max-width: 980px; margin: 0 auto; }
-.home__brand {
-  font-family: var(--font-serif);
+.home__inner { max-width: 1040px; margin: 0 auto; }
+.home__bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding-bottom: 16px; border-bottom: 1px solid var(--hairline);
+}
+.home__hero {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  margin: 34px 0 4px;
+}
+.home__eyebrow {
+  margin: 0 0 8px;
+  font-size: var(--text-xs); font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent);
+}
+.home__title {
+  font-family: var(--font-display);
+  font-weight: 800;
   font-size: var(--text-3xl);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   margin: 0;
 }
-.home__brand em { font-style: normal; color: var(--accent); }
-.home__tag { color: var(--text-2); margin: 2px 0 0; font-size: var(--text-m); }
-.home__bar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
+.home__tag { color: var(--text-2); margin: 6px 0 0; font-size: var(--text-m); }
+.home__cta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.home__import {
+  margin-top: 30px; padding: 18px 20px;
+  border: 1px solid var(--hairline); border-radius: var(--radius-l);
+  background: var(--bg-panel);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.home__section-label {
+  font-size: var(--text-xs); font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-3);
+}
+.home__helper { margin: 0; color: var(--text-2); font-size: var(--text-m); }
+.home__import-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.home__listbar { display: flex; align-items: baseline; gap: 10px; margin: 34px 0 14px; }
+.home__listbar-title {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: var(--text-l); margin: 0;
+}
+.home__count { color: var(--text-3); font-size: var(--text-s); font-variant-numeric: tabular-nums; }
+.home__sort { margin-left: auto; color: var(--text-3); font-size: var(--text-s); }
+.home__legal {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--hairline);
+  color: var(--text-3); font-size: var(--text-s);
+}
 .home__section { margin: 26px 0 10px; font-size: var(--text-m); font-weight: 600; color: var(--text-2); }
 
 .projects {
@@ -438,8 +503,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
-  min-height: 118px;
+  padding: 18px;
+  min-height: 128px;
   background: var(--bg-panel);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-l);
@@ -458,10 +523,22 @@
 /* pressing the delete button inside the card is not pressing the card */
 .project-card:has(.project-card__del:active) { transform: none; }
 .project-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.project-card__icon { color: var(--text-2); display: flex; }
+.project-card__icon {
+  width: 34px; height: 34px; border-radius: 9px; flex: none;
+  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
 .project-card__name { font-weight: 600; font-size: var(--text-l); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.project-card__meta { color: var(--text-2); font-size: var(--text-s); margin-top: auto; display: flex; gap: 10px; align-items: center; }
+.project-card__meta { color: var(--text-2); font-size: var(--text-s); display: flex; gap: 10px; align-items: center; }
 .project-card__meta > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.project-card__open {
+  margin-top: auto; padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--text-3); font-size: var(--text-s); font-weight: 600;
+  transition: color 180ms var(--ease);
+}
+.project-card:hover .project-card__open, .project-card:focus-visible .project-card__open { color: var(--accent); }
 .project-card__del { opacity: 0; margin-left: auto; border: 0; background: none; color: var(--text-3); cursor: pointer; border-radius: var(--radius-xs); padding: 2px 5px; }
 /* hover alone hides the only way to delete from keyboards and touch screens */
 .project-card:hover .project-card__del, .project-card:focus-within .project-card__del, .project-card__del:focus-visible { opacity: 1; }
@@ -1137,6 +1214,10 @@
 @media (max-width: 640px) {
   .home__bar { flex-direction: column; align-items: stretch; gap: 12px; }
   .home__bar > div:last-child { flex-wrap: wrap; }
+  .home__hero { flex-direction: column; align-items: stretch; margin-top: 26px; }
+  .home__cta { justify-content: flex-start; }
+  .home__listbar { flex-wrap: wrap; }
+  .home__sort { margin-left: 0; width: 100%; }
   /* The whole preview pane goes, not just the PDF inside it: the pane keeps an
      inline width of at least 360px, which on a 390px screen left the editor a
      30px column. */

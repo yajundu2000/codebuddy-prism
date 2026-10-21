@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type JSX } from 'react';
 import { withBase } from '../basePath';
+import Brand from './Brand';
 import { api, AuthUser, OAuthProviderInfo } from '../api';
 
 interface AuthState {
@@ -149,7 +150,7 @@ export function LoginScreen({ providers, passwordAuth, onAuthed, heading, regist
   return (
     <div className="login">
       <div className="login__card">
-        <h1 className="home__brand" style={{ fontSize: 'var(--text-3xl)', marginBottom: 2 }}>codebuddy-prism<em>.</em></h1>
+        <Brand big />
         <p className="home__tag" style={{ marginBottom: 18 }}>{title}</p>
 
         {providers.map((p) => (

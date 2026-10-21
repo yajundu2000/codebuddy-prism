@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, AuthUser, OAuthApiError, OAuthClientInfo, ProjectSummary } from '../api';
 import { LoginScreen, useAuth } from '../components/Auth';
+import Brand from '../components/Brand';
 import { consentBody, OAUTH_RESUME_KEY, readAuthorizeParams } from '../util/oauthParams';
 
 type ClientState =
@@ -66,7 +67,7 @@ export default function OAuthConsent() {
     return (
       <div className="login">
         <div className="login__card consent" data-testid="oauth-error">
-          <h1 className="home__brand" style={{ fontSize: 'var(--text-3xl)', marginBottom: 2 }}>codebuddy-prism<em>.</em></h1>
+          <Brand big />
           <p className="home__tag" style={{ marginBottom: 14 }}>This connection request can’t continue.</p>
           <p className="consent__error" title={client.detail}>{client.message}</p>
           <p className="consent__hint">Nothing was granted. Go back to the app that sent you here and start the connection again.</p>
@@ -149,7 +150,7 @@ function ConsentStep({ client, params, onSessionEnded }: { client: OAuthClientIn
   return (
     <div className="login">
       <div className="login__card consent" data-testid="oauth-consent">
-        <h1 className="home__brand" style={{ fontSize: 'var(--text-3xl)', marginBottom: 2 }}>codebuddy-prism<em>.</em></h1>
+        <Brand big />
         <p className="home__tag" style={{ marginBottom: 18 }}>Connect an app to your projects.</p>
 
         <h2 className="consent__title">

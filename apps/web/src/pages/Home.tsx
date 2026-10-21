@@ -7,6 +7,7 @@ import { useAuth } from '../components/Auth';
 import Modal from '../components/Modal';
 import ShareModal from '../components/ShareModal';
 import { IconDoc, IconLink, IconX } from '../components/Icons';
+import Brand from '../components/Brand';
 import AccountSettings from '../components/AccountSettings';
 import { getTheme, toggleTheme } from '../theme';
 import RemoteImport from '../components/RemoteImport';
@@ -279,11 +280,8 @@ export default function Home() {
       }}
     >
       <div className="home__inner">
-        <div className="home__bar">
-          <div>
-            <h1 className="home__brand">codebuddy-prism<em>.</em></h1>
-            <p className="home__tag">Write LaTeX together. Fast, versioned, yours.</p>
-          </div>
+        <header className="home__bar">
+          <Brand />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button
               className="btn"
@@ -299,10 +297,32 @@ export default function Home() {
             )}
             {authEnabled && user && (
               <span className="user-chip">
+                <span className="user-chip__avatar" aria-hidden="true">{[...user.name][0]?.toUpperCase() ?? '?'}</span>
                 <button className="user-chip__name" data-testid="user-name" onClick={() => setShowAccount(true)} title="Account settings">{user.name}</button>
                 <button className="btn btn--small" data-testid="logout" onClick={async () => { await api.logout(); setUser(null); }}>Sign out</button>
               </span>
             )}
+          </div>
+        </header>
+
+        <div className="home__hero">
+          <div>
+            <p className="home__eyebrow">Personal workspace</p>
+            <h1 className="home__title">Your projects</h1>
+            <p className="home__tag">Write LaTeX together. Fast, versioned, yours.</p>
+          </div>
+          <div className="home__cta">
+            <button className="btn btn--primary" onClick={() => setCreating(true)} data-testid="new-project">
+              + New project
+            </button>
+            <a className="btn" href="#start-from">Import existing work</a>
+          </div>
+        </div>
+
+        <section className="home__import" id="start-from">
+          <div className="home__section-label">Start from existing work</div>
+          <p className="home__helper">Import a ZIP or connect a Git provider.</p>
+          <div className="home__import-row">
             <button className="btn" data-testid="import-zip" onClick={() => zipInput.current?.click()}>Import ZIP</button>
             <input ref={zipInput} type="file" accept=".zip" hidden data-testid="import-input" aria-hidden="true" tabIndex={-1}
               onChange={async (e) => { if (e.target.files?.[0]) await importZip(e.target.files[0]); e.target.value = ''; }} />
@@ -311,11 +331,8 @@ export default function Home() {
                 From {r.label}
               </button>
             ))}
-            <button className="btn btn--primary" onClick={() => setCreating(true)} data-testid="new-project">
-              New project
-            </button>
           </div>
-        </div>
+        </section>
 
         {projects === null ? (
           <div className="empty"><div className="spinner" style={{ margin: '0 auto' }} /></div>
@@ -329,15 +346,17 @@ export default function Home() {
             <p style={{ margin: '0 0 16px' }}>No projects yet — start a paper however you like.</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button className="btn btn--primary" onClick={() => setCreating(true)}>New project</button>
-              {remotes.map((r) => (
-                <button key={r.id} className="btn" onClick={() => setImportFrom(r.id)}>Import from {r.label}</button>
-              ))}
-              <button className="btn" onClick={() => zipInput.current?.click()}>Import a ZIP</button>
             </div>
           </div>
         ) : (
+          <>
+          <div className="home__listbar">
+            <h2 className="home__listbar-title">Recent projects</h2>
+            <span className="home__count">{projects.length}</span>
+            <span className="home__sort">Newest first</span>
+          </div>
           <div className="projects" data-testid="project-grid">
-            {projects.map((p) => {
+            {[...projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((p) => {
               // Deleting is owner-only server-side; without auth everyone owns
               // everything. Don't offer what the server will refuse.
               const canManage = !authEnabled || !!p.isOwner;
@@ -370,10 +389,12 @@ export default function Home() {
                     <button className="project-card__del" title="Delete project" aria-label={`Delete ${p.name}`} style={authEnabled && p.isOwner ? undefined : { marginLeft: 'auto' }} onClick={(e) => remove(e, p)}><IconX /></button>
                   )}
                 </span>
+                <span className="project-card__open">Open project <span aria-hidden="true">→</span></span>
               </div>
               );
             })}
           </div>
+          </>
         )}
 
         {trash.length > 0 && (
@@ -385,11 +406,12 @@ export default function Home() {
         )}
 
         {/* AGPL section 13: a network instance must offer its users the source. */}
-        <p className="home__legal">
+        <footer className="home__legal">
+          <span>© {new Date().getFullYear()} codebuddy-prism · AGPL-3.0</span>
           <button className="btn btn--ghost btn--small" onClick={() => setAboutOpen(true)} data-testid="open-about">
             About &amp; source
           </button>
-        </p>
+        </footer>
       </div>
 
       {aboutOpen && <About onClose={() => setAboutOpen(false)} />}

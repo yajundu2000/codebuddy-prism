@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError, AdminStats, AdminUserRow } from '../api';
 import { useAuth } from '../components/Auth';
+import Brand from '../components/Brand';
 
 /**
  * Instance administration: who is on this server and how busy it is.
@@ -78,7 +79,7 @@ export default function Admin() {
       <div className="home__inner">
         <div className="home__bar">
           <div>
-            <h1 className="home__brand">codebuddy-prism<em>.</em></h1>
+            <Brand />
             <p className="home__tag">Server admin</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

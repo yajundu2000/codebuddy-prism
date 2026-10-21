@@ -19,6 +19,8 @@ function NotFound() {
 import { ToastProvider } from './components/Toast';
 import { DialogProvider } from './components/Dialogs';
 import { AuthProvider } from './components/Auth';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/manrope';
 import './theme.css';
 import './app.css';
 
