@@ -235,8 +235,14 @@ export default function Home() {
 
   const remove = async (e: React.MouseEvent, p: ProjectSummary) => {
     e.stopPropagation();
-    // No question first: the trash keeps the project for 30 days, and the
-    // notification carries the way back.
+    // The trash keeps the project for 30 days and the notification carries the
+    // way back; the warning is for the click itself, not the consequence.
+    if (!(await dialogs.confirm({
+      title: `Delete “${p.name}”?`,
+      body: 'The project moves to the trash and is kept for 30 days. You can restore it from the trash, or Undo right after.',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))) return;
     try {
       await api.deleteProject(p.id);
       toast(`Moved ${p.name} to the trash`, 'ok', { label: 'Undo', testId: 'undo-trash', onClick: () => restore(p.id, p.name) });

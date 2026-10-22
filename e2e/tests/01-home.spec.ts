@@ -23,12 +23,14 @@ test.describe('home', () => {
     await page.goto('/');
     const card = page.getByTestId(`project-card-${id}`);
     await expect(card).toBeVisible();
-    // no question for the trash: it is undoable, and the notification says how
+    // the trash is undoable, but the click itself is confirmed
     await card.locator('.project-card__del').click();
+    await page.getByTestId('dialog-confirm').click();
     await expect(card).not.toBeVisible();
     await page.getByTestId('undo-trash').click();
     await expect(card).toBeVisible();
     await card.locator('.project-card__del').click();
+    await page.getByTestId('dialog-confirm').click();
     await expect(card).not.toBeVisible();
     // trashed → API hides it, trash lists it, restore brings it back
     await page.getByTestId('open-trash').click();
@@ -37,6 +39,7 @@ test.describe('home', () => {
     await expect(page.getByTestId(`project-card-${id}`)).toBeVisible();
     // delete again, then delete forever from the trash
     await page.getByTestId(`project-card-${id}`).locator('.project-card__del').click();
+    await page.getByTestId('dialog-confirm').click();
     await page.getByTestId('open-trash').click();
     await page.getByTestId(`purge-${id}`).click();
     // deleting forever is the one that asks

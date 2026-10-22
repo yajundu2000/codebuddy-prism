@@ -7,6 +7,8 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- Deleting a project from its card asks for confirmation first (it moves to
+  the trash, kept 30 days; the Undo toast stays).
 - Home redesign after the test1.fig mockup: prism monogram + Manrope wordmark
   brand lockup (shared by the login, consent, and admin screens), a
   "Your projects" header with the primary actions moved into it, a dedicated
