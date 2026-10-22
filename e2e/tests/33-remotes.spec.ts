@@ -217,17 +217,12 @@ test.describe('Gitee sync', () => {
     await page.goto(`/p/${projectId}`);
     await expect(page.getByTestId('editor-shell')).toBeVisible();
 
-    // the status poll surfaces the gone repository on its own
-    await expect(page.getByTestId('gitee-remote-gone')).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('gitee-remote-gone')).toHaveText('Repository missing');
-
+    // the gone state surfaces where the user already is: the push dialog
     await page.getByTestId('gitee-push-btn').click();
-    await page.getByTestId('push-confirm').click();
-    await expect(page.locator('.toast').filter({ hasText: 'is gone from Gitee' })).toBeVisible();
-
-    await page.getByTestId('gitee-remote-gone').click();
-    await expect(page.getByTestId('app-dialog').locator('h2')).toHaveText('Unlink from Gitee');
-    await page.getByTestId('dialog-confirm').click();
+    await expect(page.getByTestId('push-gone-message')).toContainText('is gone from Gitee', { timeout: 20_000 });
+    await expect(page.getByTestId('push-confirm')).toHaveCount(0); // no push to attempt against a dead link
+    await page.getByTestId('gitee-unlink').click();
+    await expect(page.locator('.toast').filter({ hasText: `Unlinked from e2e-user/paper` })).toBeVisible();
     await expect(page.getByTestId('gitee-sync')).toHaveCount(0);
     await expect(page.getByTestId('remote-publish-open')).toBeVisible();
 

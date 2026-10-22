@@ -63,6 +63,10 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
   };
 
   /** Owner-only: drop the link so the project can be published again. Nothing is deleted on the host. */
+  const unlinkNow = async () => {
+    try { await api.remoteUnlink(projectId); toast(`Unlinked from ${link.fullName}`, 'ok'); onUnlinked(); }
+    catch (err: any) { toast(err.message, 'error'); }
+  };
   const unlink = async (why?: string) => {
     if (!(await dialogs.confirm({
       title: `Unlink from ${d.label}`,
@@ -70,8 +74,7 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
       confirmLabel: 'Unlink',
       danger: true,
     }))) return;
-    try { await api.remoteUnlink(projectId); toast(`Unlinked from ${link.fullName}`, 'ok'); onUnlinked(); }
-    catch (err: any) { toast(err.message, 'error'); }
+    await unlinkNow();
   };
   const toggleAutopush = async () => {
     if (!isOwner || autopushBusy) return;
@@ -132,11 +135,6 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
 
   return (
     <div className="gh-sync" data-testid={`${p}-sync`} title={`Synced with ${link.fullName} on ${d.label}`}>
-      {gone && (
-        <button className="btn btn--small" onClick={() => unlink(gone)} data-testid={`${p}-remote-gone`} title={gone}>
-          Repository missing
-        </button>
-      )}
       {branchInfo && (
         <div className="gh-branch" onMouseLeave={() => setMenu(false)}>
           <button className="gh-branch__chip" onClick={() => setMenu((v) => !v)} disabled={busy === 'branch'} data-testid={`${p}-branch`} title={`Switch or create a ${d.label} branch`}>
@@ -158,7 +156,7 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
               </div>
               {!onDefault && <button className="gh-branch__item" onClick={() => { setMenu(false); setCrTitle(`Update ${branchInfo.current}`); setShowCr(true); }} data-testid={`${p}-open-pr`}>Open {d.changeRequest}…</button>}
               {isOwner && (
-                <button className="gh-branch__item" onClick={() => { setMenu(false); unlink(); }} data-testid={`${p}-unlink`}>
+                <button className="gh-branch__item" onClick={() => { setMenu(false); unlink(); }} data-testid={`${p}-menu-unlink`}>
                   Unlink repository…
                 </button>
               )}
@@ -189,14 +187,30 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
       {showPush && (
         <div className="modal-backdrop" onClick={() => setShowPush(false)}>
           <div className="modal" style={{ width: 420 }} onClick={(e) => e.stopPropagation()} data-testid="push-dialog">
-            <h2 style={{ marginBottom: 8 }}>Push to {d.label}</h2>
-            <p className="modal__sub" style={{ marginBottom: 10 }}>{link.fullName} · {branchInfo?.current}</p>
-            <input className="input" style={{ width: '100%' }} value={message} data-testid="push-message" autoFocus
-              onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && doPush(message.trim() || 'Update from Aldine')} placeholder="Commit message" />
-            <div className="modal__row" style={{ marginTop: 12 }}>
-              <button className="btn" onClick={() => setShowPush(false)}>Cancel</button>
-              <button className="btn btn--primary" onClick={() => doPush(message.trim() || 'Update from Aldine')} data-testid="push-confirm">Commit &amp; push</button>
-            </div>
+            {gone ? (
+              <>
+                <h2 style={{ marginBottom: 8 }}>Push to {d.label}</h2>
+                <p style={{ fontSize: 'var(--text-s)', color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 4 }} data-testid="push-gone-message">{gone}</p>
+                <p style={{ fontSize: 'var(--text-s)', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                  The project and its history stay here — only the link is removed.
+                </p>
+                <div className="modal__row" style={{ marginTop: 12 }}>
+                  <button className="btn" onClick={() => setShowPush(false)}>Cancel</button>
+                  <button className="btn btn--danger" onClick={unlinkNow} data-testid={`${p}-unlink`}>Unlink</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 style={{ marginBottom: 8 }}>Push to {d.label}</h2>
+                <p className="modal__sub" style={{ marginBottom: 10 }}>{link.fullName} · {branchInfo?.current}</p>
+                <input className="input" style={{ width: '100%' }} value={message} data-testid="push-message" autoFocus
+                  onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && doPush(message.trim() || 'Update from Aldine')} placeholder="Commit message" />
+                <div className="modal__row" style={{ marginTop: 12 }}>
+                  <button className="btn" onClick={() => setShowPush(false)}>Cancel</button>
+                  <button className="btn btn--primary" onClick={() => doPush(message.trim() || 'Update from Aldine')} data-testid="push-confirm">Commit &amp; push</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
