@@ -980,6 +980,7 @@ export default function Editor() {
               isOwner={isProjectOwner}
               onPulled={() => { loadFiles(); loadProject(); }}
               onAutopushChange={() => loadProject()}
+              onUnlinked={() => loadProject()}
             />
           )
         ) : (

@@ -146,9 +146,11 @@ export interface Comment {
 }
 
 /** Carries the HTTP status so callers can tell a body-limit 413 (proxy or
- *  framework, no JSON `error` text worth quoting) from a route's own message. */
+ *  framework, no JSON `error` text worth quoting) from a route's own message.
+ *  `reason` is the route's machine-readable cause when it names one
+ *  (e.g. 'remote-missing'), so callers can act beyond showing the text. */
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number) { super(message); }
+  constructor(message: string, public readonly status: number, public readonly reason?: string) { super(message); }
 }
 
 /** OAuth routes answer in RFC 6749 shape (`error` is a code such as
@@ -189,8 +191,12 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { msg = ((await res.json()) as { error?: string }).error || msg; } catch { /* keep */ }
-    throw new ApiError(msg, res.status);
+    let reason: string | undefined;
+    try {
+      const body = (await res.json()) as { error?: string; reason?: string };
+      msg = body.error || msg; reason = body.reason;
+    } catch { /* keep */ }
+    throw new ApiError(msg, res.status, reason);
   }
   return res.json() as Promise<T>;
 }
@@ -358,10 +364,13 @@ export const api = {
     const res = await fetch(withBase(`/api/projects/${id}/remote/pull`), { method: 'POST' });
     const body = await res.json().catch(() => ({}));
     if (res.status === 409) return { conflict: true, conflicts: body.conflicts || [] };
-    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    if (!res.ok) throw new ApiError(body.error || `HTTP ${res.status}`, res.status, body.reason);
     return { ok: true };
   },
   remoteResetToRemote: (id: string) => req<{ ok: boolean }>(`/api/projects/${id}/remote/reset-to-remote`, { method: 'POST' }),
+  /** Drops the project's link to its remote (nothing is deleted on the host);
+   *  the way out of a repository that vanished there. */
+  remoteUnlink: (id: string) => req<{ ok: boolean }>(`/api/projects/${id}/remote`, { method: 'DELETE' }),
   remoteBranches: (id: string) => req<{ branches: string[]; current: string; default: string }>(`/api/projects/${id}/remote/branches`),
   remoteSwitchBranch: (id: string, branch: string) => req<{ ok: boolean; branch: string }>(`/api/projects/${id}/remote/switch-branch`, { method: 'POST', body: JSON.stringify({ branch }) }),
   remoteCreateBranch: (id: string, name: string) => req<{ ok: boolean; branch: string }>(`/api/projects/${id}/remote/create-branch`, { method: 'POST', body: JSON.stringify({ name }) }),

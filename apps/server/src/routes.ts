@@ -1631,12 +1631,24 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     }
     return { meta, link, provider, conn, url: provider.tokenUrl(link.cloneUrl, conn.token, conn.login), remoteBranch: link.remoteBranch };
   };
-  const projectRoute = (method: 'get' | 'post', tail: string, handler: (req: any, reply: any) => Promise<unknown>, legacyTail = tail) => {
+  const projectRoute = (method: 'get' | 'post' | 'delete', tail: string, handler: (req: any, reply: any) => Promise<unknown>, legacyTail = tail) => {
     app[method](`/api/projects/:id/remote/${tail}`, handler);
     app[method](`/api/projects/:id/github/${legacyTail}`, handler);
   };
   /** Response shape of a link: `remote`, plus `github` for web bundles from before GitLab. */
   const linkBody = (link: store.RemoteLink) => ({ remote: link, ...(link.provider === 'github' ? { github: link } : {}) });
+
+  /** The linked repository no longer exists on the host (deleted, renamed, or
+   *  hidden from the connected account — a 404 means all three): answer with
+   *  the way out instead of git's stderr. Returns true when it replied. */
+  const goneReply = (reply: any, err: any, l: Linked) => {
+    if (!gitops.isRemoteGone(err)) return false;
+    reply.code(410).send({
+      error: `The linked repository ${l.link.fullName} is gone from ${l.provider.label} — deleted, renamed, or no longer visible to the connected account. Unlink it and publish again, or restore it on ${l.provider.label}.`,
+      reason: 'remote-missing',
+    });
+    return true;
+  };
 
   // Publish a locally-created project to a fresh repository. This is the only
   // way an unlinked project gains an off-server copy, so the editor nudges
@@ -1680,10 +1692,23 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     return { ok: true, ...linkBody(link) };
   });
 
+  // Drop a project's link to its remote repository. Meta-only by design: the
+  // project and its history stay, nothing is deleted on the host, and the
+  // project can be published again. The way out of a repository that was
+  // deleted on the host. Registered directly: projectRoute prefixes /remote/.
+  app.delete('/api/projects/:id/remote', async (req: any, reply: any) => {
+    const meta = await store.readMeta(req.params.id);
+    if (auth.AUTH_ENABLED && !isOwner(meta, reqUser(req))) return reply.code(403).send({ error: 'Only the owner can unlink this project' });
+    if (!store.remoteLink(meta)) return reply.code(400).send({ error: 'This project is not linked to a remote repository' });
+    store.setRemoteLink(meta, null);
+    await store.writeMeta(meta);
+    return { ok: true };
+  });
+
   projectRoute('get', 'status', async (req, reply) => {
     const l = await linkedRemote(req, reply); if (!l) return;
     try { return { linked: true, ...l.link, ...(await gitops.remoteStatus(req.params.id, l.remoteBranch, l.url)) }; }
-    catch (err: any) { return reply.code(502).send({ error: err.message }); }
+    catch (err: any) { if (goneReply(reply, err, l)) return; return reply.code(502).send({ error: err.message }); }
   });
 
   projectRoute('post', 'push', async (req, reply) => {
@@ -1705,7 +1730,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       await gitops.pushToRemote(req.params.id, l.remoteBranch, l.url);
       if (head) lastPushedHead.set(req.params.id, head);
       return { ok: true };
-    } catch (err: any) { return reply.code(400).send({ error: `Push failed: ${err.message}` }); }
+    } catch (err: any) { if (goneReply(reply, err, l)) return; return reply.code(400).send({ error: `Push failed: ${err.message}` }); }
   });
 
   projectRoute('post', 'pull', async (req, reply) => {
@@ -1717,7 +1742,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       if (!result.ok) return reply.code(409).send({ error: 'Merge conflict', conflicts: result.conflicts });
       refreshBranchDocsFromDisk(req.params.id, 'main'); // push the merged content into open editors
       return { ok: true };
-    } catch (err: any) { return reply.code(400).send({ error: `Pull failed: ${err.message}` }); }
+    } catch (err: any) { if (goneReply(reply, err, l)) return; return reply.code(400).send({ error: `Pull failed: ${err.message}` }); }
   });
 
   // Conflict escape hatch: discard local changes and take the remote version.
@@ -1729,7 +1754,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       await gitops.resetToRemote(req.params.id, l.remoteBranch, l.url);
       refreshBranchDocsFromDisk(req.params.id, 'main');
       return { ok: true };
-    } catch (err: any) { return reply.code(400).send({ error: `Reset failed: ${err.message}` }); }
+    } catch (err: any) { if (goneReply(reply, err, l)) return; return reply.code(400).send({ error: `Reset failed: ${err.message}` }); }
   });
 
   // ---------- remote branches + change requests ----------

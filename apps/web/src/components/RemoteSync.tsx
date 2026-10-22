@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, RemoteLink } from '../api';
 import { remoteDescriptor, sentence } from '../remotes';
 import { useToast } from './Toast';
+import { useDialogs } from './Dialogs';
 import { useExitGhost } from '../exitGhost';
 
 /** Toolbar control for a project linked to a git host: branch switch/create
@@ -10,13 +11,14 @@ import { useExitGhost } from '../exitGhost';
  *  job (it pushes after autosave commits on main) and the owner's setting:
  *  members see its state but cannot flip it. The provider comes from the
  *  link; the server never takes it from the request for these routes. */
-export default function RemoteSync({ projectId, link, autopush, isOwner, onPulled, onAutopushChange }: {
+export default function RemoteSync({ projectId, link, autopush, isOwner, onPulled, onAutopushChange, onUnlinked }: {
   projectId: string;
   link: RemoteLink;
   autopush: boolean;
   isOwner: boolean;
   onPulled(): void;
   onAutopushChange(v: boolean): void;
+  onUnlinked(): void;
 }) {
   const p = link.provider;
   const d = remoteDescriptor(p);
@@ -32,12 +34,18 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
   const [newName, setNewName] = useState('');
   const [crTitle, setCrTitle] = useState('');
   const [showCr, setShowCr] = useState(false);
+  // The linked repository is gone from the host: the server's message doubles as the flag.
+  const [gone, setGone] = useState<string | null>(null);
   const toast = useToast();
+  const dialogs = useDialogs();
   const leave = useExitGhost();
 
   const refresh = useCallback(async () => {
-    try { const s = await api.projectRemoteStatus(projectId); setStatus({ ahead: s.ahead, behind: s.behind }); }
-    catch { /* offline / no token */ }
+    try { const s = await api.projectRemoteStatus(projectId); setStatus({ ahead: s.ahead, behind: s.behind }); setGone(null); }
+    catch (err: any) {
+      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
+      /* else: offline / no token */
+    }
   }, [projectId]);
   const loadBranches = useCallback(async () => {
     try { setBranchInfo(await api.remoteBranches(projectId)); } catch { /* offline */ }
@@ -47,8 +55,23 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
   const doPush = async (msg: string) => {
     setBusy('push'); setShowPush(false);
     try { await api.remotePush(projectId, msg); toast(`Pushed to ${d.label}`, 'ok'); await refresh(); }
-    catch (err: any) { toast(err.message, 'error'); }
+    catch (err: any) {
+      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
+      toast(err.message, 'error');
+    }
     setBusy('');
+  };
+
+  /** Owner-only: drop the link so the project can be published again. Nothing is deleted on the host. */
+  const unlink = async (why?: string) => {
+    if (!(await dialogs.confirm({
+      title: `Unlink from ${d.label}`,
+      body: why || `The project and its history stay here — only the link to ${link.fullName} is removed. Publish again to link a new repository.`,
+      confirmLabel: 'Unlink',
+      danger: true,
+    }))) return;
+    try { await api.remoteUnlink(projectId); toast(`Unlinked from ${link.fullName}`, 'ok'); onUnlinked(); }
+    catch (err: any) { toast(err.message, 'error'); }
   };
   const toggleAutopush = async () => {
     if (!isOwner || autopushBusy) return;
@@ -66,13 +89,19 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
       const r = await api.remotePull(projectId);
       if (r.conflict) setConflicts(r.conflicts || []);
       else { toast(`Pulled from ${d.label}`, 'ok'); onPulled(); await refresh(); }
-    } catch (err: any) { toast(err.message, 'error'); }
+    } catch (err: any) {
+      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
+      toast(err.message, 'error');
+    }
     setBusy('');
   };
   const takeRemote = async () => {
     setBusy('reset');
     try { await api.remoteResetToRemote(projectId); toast(`Reset to the ${d.label} version`, 'ok'); setConflicts(null); onPulled(); await refresh(); }
-    catch (err: any) { toast(err.message, 'error'); }
+    catch (err: any) {
+      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
+      toast(err.message, 'error');
+    }
     setBusy('');
   };
   const switchTo = async (branch: string) => {
@@ -103,6 +132,11 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
 
   return (
     <div className="gh-sync" data-testid={`${p}-sync`} title={`Synced with ${link.fullName} on ${d.label}`}>
+      {gone && (
+        <button className="btn btn--small" onClick={() => unlink(gone)} data-testid={`${p}-remote-gone`} title={gone}>
+          Repository missing
+        </button>
+      )}
       {branchInfo && (
         <div className="gh-branch" onMouseLeave={() => setMenu(false)}>
           <button className="gh-branch__chip" onClick={() => setMenu((v) => !v)} disabled={busy === 'branch'} data-testid={`${p}-branch`} title={`Switch or create a ${d.label} branch`}>
@@ -123,6 +157,11 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
                 <button className="btn btn--small" onClick={createBranch} data-testid={`${p}-create-branch`}>Create</button>
               </div>
               {!onDefault && <button className="gh-branch__item" onClick={() => { setMenu(false); setCrTitle(`Update ${branchInfo.current}`); setShowCr(true); }} data-testid={`${p}-open-pr`}>Open {d.changeRequest}…</button>}
+              {isOwner && (
+                <button className="gh-branch__item" onClick={() => { setMenu(false); unlink(); }} data-testid={`${p}-unlink`}>
+                  Unlink repository…
+                </button>
+              )}
             </div>
           )}
         </div>

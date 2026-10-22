@@ -211,6 +211,36 @@ test.describe('Gitee sync', () => {
     await expect(page.getByTestId('gitee-sync')).toBeVisible();
     expect(git(['--git-dir', path.join(GITEE_DATA, 'e2e-user/gitee-paper.git'), 'show', 'main:main.tex'])).toContain('\\documentclass');
   });
+
+  test('a repository deleted on the host: the way out via unlink and re-publish', async ({ page, request }) => {
+    await request.get(`${GITEE_MOCK}/__delete/${encodeURIComponent('e2e-user/paper')}`);
+    await page.goto(`/p/${projectId}`);
+    await expect(page.getByTestId('editor-shell')).toBeVisible();
+
+    // the status poll surfaces the gone repository on its own
+    await expect(page.getByTestId('gitee-remote-gone')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('gitee-remote-gone')).toHaveText('Repository missing');
+
+    await page.getByTestId('gitee-push-btn').click();
+    await page.getByTestId('push-confirm').click();
+    await expect(page.locator('.toast').filter({ hasText: 'is gone from Gitee' })).toBeVisible();
+
+    await page.getByTestId('gitee-remote-gone').click();
+    await expect(page.getByTestId('app-dialog').locator('h2')).toHaveText('Unlink from Gitee');
+    await page.getByTestId('dialog-confirm').click();
+    await expect(page.getByTestId('gitee-sync')).toHaveCount(0);
+    await expect(page.getByTestId('remote-publish-open')).toBeVisible();
+
+    await page.getByTestId('remote-publish-open').click();
+    const modal = page.getByTestId('remote-publish');
+    await expect(modal).toBeVisible();
+    await page.getByTestId('remote-publish-provider-gitee').click();
+    await page.getByTestId('publish-repo-name').fill('paper-again');
+    await page.getByTestId('publish-submit').click();
+    await expect(page.locator('.toast').filter({ hasText: 'Published to e2e-user/paper-again' })).toBeVisible();
+    await expect(page.getByTestId('gitee-sync')).toBeVisible();
+    expect(git(['--git-dir', path.join(GITEE_DATA, 'e2e-user/paper-again.git'), 'show', 'main:main.tex'])).toContain('\\documentclass');
+  });
 });
 
 test.describe('GitLab sync', () => {

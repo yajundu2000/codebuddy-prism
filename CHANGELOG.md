@@ -25,6 +25,15 @@ All notable changes to Aldine are documented here. The format follows
   disabled), and `GITEE_API_BASE` replaces `GITEA_API_BASE` as the tests-only
   API override.
 
+### Added
+- Recovery for a repository deleted on the git host (any provider): the sync
+  routes answer `410 remote-missing` with the repository named and the way
+  out, the sync panel shows a "Repository missing" state with an Unlink
+  action (also in the branch menu, owner-only), and
+  `DELETE /api/projects/:id/remote` clears the link so the project can be
+  published to a new repository. Autopush stops itself for a gone repository
+  instead of retrying every commit.
+
 ## [0.1.0] — 2026-10-16
 
 First release of codebuddy-prism, a fork of Aldine.

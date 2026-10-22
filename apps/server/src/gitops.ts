@@ -632,14 +632,29 @@ export function stripCreds(url: string): string {
  * git echoes the URL it was given, token included, in transport and auth
  * failures. Every network op below rethrows through this so no caller can
  * forward a credential in an error message, a toast or a log line.
+ *
+ * A repository deleted (or hidden from the token's account) on the host makes
+ * every transport fail with one of these; the marker lets the routes answer
+ * with the way out instead of git's stderr. `could not read Username` (no
+ * credentials at all) and other status codes are deliberately absent: pushes
+ * always carry a token, so those mean something else. The file-transport
+ * wording only occurs in tests (providers hand out https URLs), but real git
+ * must be able to hit the marker there.
  */
+const REMOTE_GONE = /The requested URL returned error: 404|Repository not found|repository does not exist|does not appear to be a git repository/i;
+export function isRemoteGone(err: any): boolean {
+  return !!(err && typeof err.message === 'string' && REMOTE_GONE.test(err.message)) || err?.remoteMissing === true;
+}
+
 async function scrubbed<T>(op: () => Promise<T>): Promise<T> {
   try { return await op(); }
   catch (err: any) {
     if (err && typeof err.message === 'string') {
       const clean = stripCreds(err.message);
-      if (clean !== err.message) {
-        const e = new Error(clean); e.name = err.name; throw e;
+      if (clean !== err.message || REMOTE_GONE.test(clean)) {
+        const e = new Error(clean); e.name = err.name;
+        if (REMOTE_GONE.test(clean)) (e as any).remoteMissing = true;
+        throw e;
       }
     }
     throw err;

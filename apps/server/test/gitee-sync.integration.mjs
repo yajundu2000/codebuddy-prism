@@ -206,5 +206,32 @@ r = await app.inject({url: '/api/remotes'});
 check(J(r).length === 1 && J(r)[0].id === 'gitee', 'REMOTE_PROVIDERS=gitee lists only gitee: ' + r.body);
 delete process.env.REMOTE_PROVIDERS;
 
+// ---------- the repository was deleted on the host: the way out ----------
+process.env.REMOTE_PROVIDERS = '';
+r = await app.inject({method: 'POST', url: '/api/remotes/gitee/connect', payload: {token: 'good'}});
+check(r.statusCode === 200, 'reconnect for the deleted-repo section ' + r.body);
+mock.repos.delete('tester/paper');
+fs.rmSync(ge.bare, { recursive: true, force: true });
+const gone = (res, what) => check(res.statusCode === 410 && J(res).reason === 'remote-missing' && /tester\/paper/.test(J(res).error) && /gone from Gitee/.test(J(res).error), `${what} → 410 remote-missing naming the repo: ` + res.body);
+r = await app.inject({url: `/api/projects/${pid}/remote/status`}); gone(r, 'status');
+r = await app.inject({method: 'POST', url: `/api/projects/${pid}/remote/push`, payload: {message: 'nowhere'}}); gone(r, 'push');
+r = await app.inject({method: 'POST', url: `/api/projects/${pid}/remote/pull`}); gone(r, 'pull');
+r = await app.inject({method: 'POST', url: `/api/projects/${pid}/remote/reset-to-remote`}); gone(r, 'reset-to-remote');
+
+r = await app.inject({method: 'POST', url: '/api/projects', payload: {name: 'Never Linked'}});
+const neverLinked = J(r).id;
+r = await app.inject({method: 'DELETE', url: `/api/projects/${neverLinked}/remote`});
+check(r.statusCode === 400 && /not linked/.test(J(r).error), 'unlinking an unlinked project → 400: ' + r.body);
+r = await app.inject({method: 'DELETE', url: `/api/projects/${pid}/remote`});
+check(r.statusCode === 200 && J(r).ok === true, 'unlink the dead link: ' + r.body);
+check((await store.readMeta(pid)).remote == null, 'meta carries no link after unlink');
+r = await app.inject({url: `/api/projects/${pid}`});
+check(J(r).remote == null, 'summary reports no remote: ' + JSON.stringify(J(r).remote));
+r = await app.inject({method: 'POST', url: `/api/projects/${pid}/remote/link`, payload: {provider: 'gitee', name: 'Paper Again'}});
+check(r.statusCode === 200 && J(r).remote?.fullName === 'tester/Paper-Again', 'publish to a fresh repository after unlink: ' + r.body);
+r = await app.inject({method: 'POST', url: `/api/projects/${pid}/remote/push`, payload: {message: 'again'}});
+check(r.statusCode === 200, 'push into the new repository ' + r.body);
+check(refs(mock.repos.get('tester/Paper-Again').bare).includes('main'), 'the new repository received the push');
+
 await mock.close(); await app.close(); fs.rmSync(tmp, { recursive: true, force: true });
-console.log('Gitee integration (connect→import→push→pull→conflict→branches→PR→link→pages→revoked→allowlist): ALL PASSED');
+console.log('Gitee integration (connect→import→push→pull→conflict→branches→PR→link→pages→revoked→allowlist→deleted-remote→unlink→relink): ALL PASSED');

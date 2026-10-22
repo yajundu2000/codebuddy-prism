@@ -222,6 +222,16 @@ console.log('remotes: all assertions passed');
   eq(gitops.stripCreds('fatal: unable to access \'https://oauth2:glpat-abc@gitlab.example.org/g/p.git/\': could not resolve host; also https://x-access-token:tok@github.com/o/r'),
      'fatal: unable to access \'https://gitlab.example.org/g/p.git/\': could not resolve host; also https://github.com/o/r',
      'stripCreds scrubs every credential in a message');
+  // ---------- remote-gone classification (repository deleted on the host) ----------
+  const gone = (msg) => gitops.isRemoteGone(new Error(msg));
+  check(gone("fatal: unable to access 'https://gitee.com/o/r.git/': The requested URL returned error: 404"), 'gitee 404 wording classifies');
+  check(gone('remote: Repository not found.\nfatal: Repository not found.'), 'github wording classifies');
+  check(gone('remote: Repository does not exist'), 'generic does-not-exist classifies');
+  check(gone("fatal: '/tmp/nope.git' does not appear to be a git repository"), 'file transport (tests) classifies');
+  check(!gone("fatal: could not read Username for 'https://gitee.com': No such device or address"), 'a missing credential is not a missing repository');
+  check(!gone("fatal: unable to access 'https://gitee.com/o/r.git/': The requested URL returned error: 403"), 'a 403 is a permission problem, not a gone repository');
+  check(!gone('fatal: unable to access: Connection refused'), 'a network failure is not a gone repository');
+
   const fs = await import('node:fs'); const os = await import('node:os'); const path = await import('node:path');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aldine-scrub-'));
   process.env.DATA_DIR = tmp;

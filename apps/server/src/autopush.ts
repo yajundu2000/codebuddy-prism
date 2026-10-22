@@ -84,15 +84,24 @@ async function run(id: string): Promise<void> {
     outcome = await pushImpl(id);
     s.attempts = 0;
   } catch (err: any) {
-    s.attempts += 1;
-    if (s.attempts >= MAX_ATTEMPTS) {
-      console.warn(`[autopush] ${id}: giving up after ${s.attempts} attempts (${err?.message || err}); the next commit retries`);
-      s.attempts = 0;
+    // A repository deleted on the host never comes back by retrying; stop
+    // here instead of burning the backoff ladder on every commit. The link's
+    // autopush flag stays on, so a re-published link resumes by itself.
+    if (gitops.isRemoteGone(err)) {
+      console.warn(`[autopush] ${id}: the linked repository is gone from the host (${err?.message || err}); autopush stops until the link is replaced`);
+      states.delete(id);
       outcome = 'off';
     } else {
-      const wait = Math.min(debounceMs() * 2 ** s.attempts, MAX_BACKOFF_MS);
-      s.timer = setTimeout(() => { s.timer = null; void run(id); }, wait);
-      s.timer.unref();
+      s.attempts += 1;
+      if (s.attempts >= MAX_ATTEMPTS) {
+        console.warn(`[autopush] ${id}: giving up after ${s.attempts} attempts (${err?.message || err}); the next commit retries`);
+        s.attempts = 0;
+        outcome = 'off';
+      } else {
+        const wait = Math.min(debounceMs() * 2 ** s.attempts, MAX_BACKOFF_MS);
+        s.timer = setTimeout(() => { s.timer = null; void run(id); }, wait);
+        s.timer.unref();
+      }
     }
   } finally {
     s.running = false;
