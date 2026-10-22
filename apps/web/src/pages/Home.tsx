@@ -6,7 +6,7 @@ import { useDialogs } from '../components/Dialogs';
 import { useAuth } from '../components/Auth';
 import Modal from '../components/Modal';
 import ShareModal from '../components/ShareModal';
-import { IconDoc, IconLink, IconX } from '../components/Icons';
+import { IconDoc, IconLink, IconTrash, IconX } from '../components/Icons';
 import Brand from '../components/Brand';
 import AccountSettings from '../components/AccountSettings';
 import { getTheme, toggleTheme } from '../theme';
@@ -406,7 +406,7 @@ export default function Home() {
         {trash.length > 0 && (
           <p style={{ textAlign: 'center', marginTop: 26 }}>
             <button className="btn btn--ghost btn--small" onClick={() => setShowTrash(true)} data-testid="open-trash">
-              Trash ({trash.length})
+              <IconTrash /> Trash ({trash.length})
             </button>
           </p>
         )}

@@ -74,6 +74,14 @@ export const IconSpark = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const IconTrash = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M2.5 4h11M6.5 4V2.75a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75V4" />
+    <path d="M4 4v8.75A1.25 1.25 0 0 0 5.25 14.25h5.5A1.25 1.25 0 0 0 12 12.75V4" />
+    <path d="M6.5 7v4.5M9.5 7v4.5" />
+  </svg>
+);
+
 export const IconX = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)} width={11} height={11}>
     <path d="M3 3l10 10M13 3 3 13" />
