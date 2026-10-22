@@ -57,8 +57,10 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
     setBusy('push'); setShowPush(false);
     try { await api.remotePush(projectId, msg); toast(`Pushed to ${d.label}`, 'ok'); setNoWrite(null); await refresh(); }
     catch (err: any) {
-      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
-      if (err?.reason === 'remote-no-write') setNoWrite(err.message);
+      // Both are terminal for this link: reopen the dialog as the Unlink card,
+      // so the way out sits where the failure was just reported.
+      if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); setShowPush(true); }
+      if (err?.reason === 'remote-no-write') { setNoWrite(err.message); setShowPush(true); }
       toast(err.message, 'error');
     }
     setBusy('');
