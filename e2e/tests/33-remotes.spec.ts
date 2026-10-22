@@ -119,6 +119,35 @@ test.describe('Gitee sync', () => {
     await expect(page.locator('.cm-content')).toContainText('Hello from Gitee');
   });
 
+  test('pasting a repository URL imports it directly, a missing path says so', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('new-from-gitee').click();
+    await expect(page.getByTestId('gitee-import')).toBeVisible();
+    const disconnect = page.getByTestId('gitee-disconnect');
+    await expect(disconnect.or(page.getByTestId('gitee-token'))).toBeVisible();
+    if (await disconnect.isVisible()) { await disconnect.click(); await expect(page.getByTestId('gitee-token')).toBeVisible(); }
+    await page.getByTestId('gitee-token').fill('e2e-token');
+    await page.getByTestId('gitee-connect').click();
+    await expect(page.getByTestId('gitee-repos')).toBeVisible();
+
+    // a full URL turns the filter field into a direct import
+    await page.getByTestId('gitee-filter').fill('https://gitee.com/e2e-user/paper.git');
+    await expect(page.getByTestId('gitee-import-path')).toBeVisible();
+    await page.getByTestId('gitee-filter').press('Enter');
+    await expect(page.getByTestId('editor-shell')).toBeVisible({ timeout: 30_000 });
+    await openFile(page, 'main.tex');
+    await expect(page.locator('.cm-content')).toContainText('Hello from Gitee');
+    projectId = new URL(page.url()).pathname.split('/').pop()!;
+
+    // a path the account cannot see is a clear error, not silence
+    await page.goto('/');
+    await page.getByTestId('new-from-gitee').click();
+    await expect(page.getByTestId('gitee-repos')).toBeVisible();
+    await page.getByTestId('gitee-filter').fill('e2e-user/missing');
+    await page.getByTestId('gitee-import-path').click();
+    await expect(page.locator('.toast').filter({ hasText: /not found/i })).toBeVisible();
+  });
+
   test('push reaches the bare repo, a branch and a pull request follow', async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__opened = [];

@@ -3,6 +3,7 @@ import { api, RemoteRepo, RemoteStatus, RemoteTokenError } from '../api';
 import { remoteDescriptor, RemoteProviderId } from '../remotes';
 import { useToast } from './Toast';
 import { friendlyDate } from '../util/dates';
+import { repoPathFromInput } from '../util/repoPath';
 import Modal from './Modal';
 import RemoteConnectForm from './RemoteConnect';
 
@@ -44,10 +45,20 @@ export default function RemoteImport({ provider, onClose, onImported }: {
       onImported(p.id);
     } catch (err: any) { toast(err.message, 'error'); setBusy(''); }
   };
+  /** A pasted URL or `owner/repo` path imports directly, list or no list. */
+  const importPath = async (fullName: string) => {
+    setBusy(fullName);
+    try {
+      const p = await api.remoteImport(provider, fullName);
+      toast(`Imported ${fullName}`, 'ok');
+      onImported(p.id);
+    } catch (err: any) { toast(err.message, 'error'); setBusy(''); }
+  };
 
   const disconnect = async () => { await api.remoteDisconnect(provider); setRepos(null); loadStatus(); };
 
   const shown = (repos || []).filter((r) => r.fullName.toLowerCase().includes(filter.toLowerCase()));
+  const direct = repoPathFromInput(filter);
 
   return (
     <Modal onClose={onClose} label={`Import from ${d.label}`} wide testId={`${provider}-import`}>
@@ -74,10 +85,25 @@ export default function RemoteImport({ provider, onClose, onImported }: {
               </span>
               <button className="btn btn--ghost btn--small" onClick={disconnect} data-testid={`${provider}-disconnect`}>Disconnect</button>
             </p>
-            <input className="input" style={{ width: '100%', margin: '8px 0' }} placeholder="Filter repositories…" value={filter} data-testid={`${provider}-filter`} onChange={(e) => setFilter(e.target.value)} autoFocus />
+            <input
+              className="input" style={{ width: '100%', margin: '8px 0' }} value={filter}
+              placeholder="Filter repositories, or paste a repository URL…" data-testid={`${provider}-filter`} autoFocus
+              onChange={(e) => setFilter(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && direct && !busy) importPath(direct); }}
+            />
+            {direct && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 8px', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-m)', marginBottom: 8 }}>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--text-s)', color: 'var(--text-2)' }}>
+                  Import <strong style={{ color: 'var(--text)' }}>{direct}</strong> directly
+                </span>
+                <button className="btn btn--primary btn--small" onClick={() => importPath(direct)} disabled={!!busy} data-testid={`${provider}-import-path`}>
+                  {busy === direct ? 'Importing…' : 'Import'}
+                </button>
+              </div>
+            )}
             <div className="gh-repos" data-testid={`${provider}-repos`}>
               {!repos && <p style={{ color: 'var(--text-2)', padding: 8 }}>Loading your repositories…</p>}
-              {repos && shown.length === 0 && <p style={{ color: 'var(--text-2)', padding: 8 }}>No matching repositories.</p>}
+              {repos && shown.length === 0 && <p style={{ color: 'var(--text-2)', padding: 8 }}>{direct ? `No matching repositories — import ${direct} directly instead.` : 'No matching repositories.'}</p>}
               {shown.map((r) => (
                 <button key={r.fullName} className="gh-repo" onClick={() => importRepo(r)} disabled={!!busy} data-testid={`${provider}-repo-${r.fullName}`}>
                   <div className="gh-repo__main">

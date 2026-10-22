@@ -26,6 +26,9 @@ All notable changes to Aldine are documented here. The format follows
   API override.
 
 ### Added
+- The import dialog's filter field takes a pasted repository URL or
+  `owner/repo` path and offers a direct Import (Enter), instead of silently
+  filtering the list to nothing.
 - The editor's problems panel (compile errors and warnings) is collapsible:
   folded by default to a one-row header that counts errors and warnings, with
   the choice kept in `aldine.errorsOpen`. View log stays available folded.
