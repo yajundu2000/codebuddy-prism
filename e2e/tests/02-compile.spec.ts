@@ -34,6 +34,7 @@ test.describe('LaTeX compilation', () => {
       await openProject(page, id);
       await typeset(page);
       await expect(page.getByTestId('pdf-status')).toContainText(/error/i, { timeout: 120_000 });
+      await page.getByTestId('errors-toggle').click(); // the list is collapsed until asked for
       const row = page.getByTestId('errors-panel').locator('.errors__row').first();
       await expect(row).toBeVisible();
       await expect(row).toContainText(/Undefined control sequence|error/i);

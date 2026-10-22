@@ -26,6 +26,9 @@ All notable changes to Aldine are documented here. The format follows
   API override.
 
 ### Added
+- The editor's problems panel (compile errors and warnings) is collapsible:
+  folded by default to a one-row header that counts errors and warnings, with
+  the choice kept in `aldine.errorsOpen`. View log stays available folded.
 - Recovery for a repository deleted on the git host (any provider): the sync
   routes answer `410 remote-missing` with the repository named and the way
   out, and the push dialog turns into an Unlink card — the only place Unlink

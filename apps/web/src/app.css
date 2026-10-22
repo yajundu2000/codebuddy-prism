@@ -971,6 +971,22 @@
   top: 0;
   background: var(--bg-inset);
 }
+.errors__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.errors__toggle:hover { color: var(--text); }
+.errors__chevron { transition: transform 140ms var(--ease); flex: none; }
+[aria-expanded="false"] .errors__chevron { transform: rotate(-90deg); }
 .errors__row {
   display: flex;
   gap: 8px;

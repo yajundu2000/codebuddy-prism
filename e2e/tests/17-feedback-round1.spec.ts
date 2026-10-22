@@ -238,6 +238,7 @@ test.describe('compile to completion', () => {
       expect(bib[0].message).toMatch(/^BibTeX: /);
       // the row is a link into refs.bib, not a dead end
       await expect(page.getByTestId('errors-panel')).toBeVisible();
+      await page.getByTestId('errors-toggle').click(); // the list is collapsed until asked for
       await page.getByTestId('errors-panel').getByText(/BibTeX: /).first().click();
       await expect(page.getByTestId('active-file')).toHaveText('refs.bib');
     } finally { await cleanup(request, id); }

@@ -101,6 +101,8 @@ export default function Editor() {
     });
   }, []);
   const [showLog, setShowLog] = useState(false);
+  const [errorsOpen, setErrorsOpen] = useState(() => localStorage.getItem('aldine.errorsOpen') === '1');
+  const toggleErrors = () => setErrorsOpen((v) => { localStorage.setItem('aldine.errorsOpen', v ? '0' : '1'); return !v; });
   // Scroll the log to its first error once the dialog has rendered.
   const logHit = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -1196,10 +1198,13 @@ export default function Editor() {
           {showErrors && (
             <div className="errors" data-testid="errors-panel">
               <div className="errors__head">
-                <span>{errCount > 0 ? `${errCount} error${errCount === 1 ? '' : 's'}` : 'Problems'}</span>
+                <button className="errors__toggle" onClick={toggleErrors} data-testid="errors-toggle" aria-expanded={errorsOpen} title={errorsOpen ? 'Collapse the problems list' : 'Expand the problems list'}>
+                  <svg className="errors__chevron" width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <span>{errCount > 0 ? `${errCount} error${errCount === 1 ? '' : 's'}` : 'Problems'}{errors.length > errCount ? ` · ${errors.length - errCount} warning${errors.length - errCount === 1 ? '' : 's'}` : ''}</span>
+                </button>
                 <button className="btn btn--ghost btn--small" onClick={() => setShowLog(true)} data-testid="view-log">View log</button>
               </div>
-              {(() => {
+              {errorsOpen && (() => {
                 // Errors render before warnings: a failing biblatex run emits
                 // 100+ citation warnings and the one actionable error must
                 // never sit past the row cap.
