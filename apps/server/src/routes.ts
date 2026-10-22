@@ -1465,7 +1465,7 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     return { ok: true };
   });
 
-  // ---------- remote providers (GitHub, GitLab, Gitea/Forgejo): per-user connection ----------
+  // ---------- remote providers (GitHub, GitLab, Gitee): per-user connection ----------
   // In no-auth (single-tenant) mode there's no user, so connections hang off a
   // fixed 'local' id. The provider comes from the URL for account-level routes
   // (`/api/remotes/:provider/*`) and from the stored link for project routes

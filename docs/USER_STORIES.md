@@ -166,34 +166,30 @@ and in `33-remotes.spec.ts` against `e2e/tests/mock-gitlab.mjs`.*
   owner can switch it off; a member without a GitLab token of their own
   still syncs a provisioned project through the service account.
 
-## Gitea / Forgejo sync (GT)
+## Gitee sync (GE)
 
-*Automated at the API level in `apps/server/test/gitea-sync.integration.mjs`
-and in `33-remotes.spec.ts` against `e2e/tests/mock-gitea.mjs`. Gitea and
-Forgejo (Codeberg) share one API, so one provider covers both.*
+*Automated at the API level in `apps/server/test/gitee-sync.integration.mjs`
+and in `33-remotes.spec.ts` against `e2e/tests/mock-gitee.mjs`. gitee.com is
+the host mainland-China users can actually reach — the reason this provider
+exists.*
 
-- **GT-1** — I connect a Gitea or Forgejo account with a personal access
-  token and the instance URL (https, sub-path installs included); the dialog
-  refuses to send a token without an instance and offers codeberg.org as the
-  example. There is no OAuth.
-- **GT-2** — I import an `owner/repo` repository; every repository the token
-  can see is listed, most recently updated first, however small the
-  instance's page size.
-- **GT-3** — I publish a local project to my account, or through the API into
-  an organisation (the token then also needs `write:organization`); the
-  publish dialog offers the account only.
-- **GT-8** — The project remembers which instance it was linked on: a
-  collaborator connected to a different Gitea or Forgejo instance syncs it
-  through the linker's connection, and when nobody is connected there the
-  error names the instance. A clone URL the instance returns is used only if
-  it is https on that same instance.
-- **GT-4** — I push, pull and switch branches exactly as with GitHub; the push
+- **GE-1** — I connect a Gitee account with a personal access token
+  (private token, the default scopes are enough); gitee.com is the one
+  instance, so the dialog asks for nothing else. There is no OAuth.
+- **GE-2** — I import an `owner/repo` repository; every repository the token
+  can see is listed, most recently updated first, across as many pages as it
+  takes (a short page ends the walk; a host that never ends is an error, not
+  a truncated list).
+- **GE-3** — I publish a local project to my account; publishing into an
+  organisation or enterprise is refused with a clear message rather than
+  half-worked.
+- **GE-4** — I push, pull and switch branches exactly as with GitHub; the push
   goes over https with the token as the password under my own login.
-- **GT-5** — I open a pull request from the editor; the dialog says "pull
+- **GE-5** — I open a pull request from the editor; the dialog says "pull
   request", never "merge request".
-- **GT-6** — A revoked token gets me the reconnect prompt instead of an error
+- **GE-6** — A revoked token gets me the reconnect prompt instead of an error
   wall, in the import dialog and in the editor.
-- **GT-7** — As an operator I hide the provider with `REMOTE_PROVIDERS`; a
+- **GE-7** — As an operator I hide the provider with `REMOTE_PROVIDERS`; a
   project linked to it says so instead of failing.
 
 ## References & Zotero (REF)

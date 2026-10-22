@@ -1,12 +1,12 @@
 /**
- * Remote git hosting providers (GitHub, GitLab, Gitea/Forgejo). A provider is a thin REST
+ * Remote git hosting providers (GitHub, GitLab, Gitee). A provider is a thin REST
  * client plus the two facts git needs: how to put a token into a clone URL
  * and what the host calls a change request. Everything git-side lives in
  * gitops and is provider-neutral; everything user-facing (which provider a
  * project is linked to) is stored on the project, never taken from a request.
  */
 
-export type RemoteProviderId = 'github' | 'gitlab' | 'gitea';
+export type RemoteProviderId = 'github' | 'gitlab' | 'gitee';
 
 export interface RemoteRepo {
   /** Opaque path on the host: `owner/repo` on GitHub, `group/sub/project` on GitLab. */
@@ -20,7 +20,7 @@ export interface RemoteRepo {
   updatedAt: string;
 }
 
-/** Per-user token, kept in the secrets DataStore. `baseUrl` is set for a self-hosted GitLab and for every Gitea/Forgejo instance. */
+/** Per-user token, kept in the secrets DataStore. `baseUrl` is set for a self-hosted GitLab instance. */
 export interface RemoteConnection { token: string; login: string; name?: string; baseUrl?: string }
 
 export class RemoteApiError extends Error {
@@ -33,7 +33,7 @@ export interface RemoteProvider {
   changeRequestLabel: 'pull request' | 'merge request';
   /** Whether the host is a self-hostable product (the connect UI offers a base URL field). */
   selfHosted: boolean;
-  /** The host has no canonical instance: a token connect must name one (Gitea/Forgejo). */
+  /** The host has no canonical instance: a token connect must name one. */
   baseUrlRequired?: boolean;
   /** A public instance the connect error names when the URL is missing (hosts with `baseUrlRequired`). */
   baseUrlExample?: string;
@@ -82,8 +82,8 @@ export function normalizeInstanceUrl(raw: string | undefined, label: string, all
 
 /**
  * A clone URL the host returned may only point git at the instance the
- * connection was made on: the host is user-chosen (any https URL for Gitea
- * and self-hosted GitLab), so an instance answering with `file://` or a
+ * connection was made on: the host is user-chosen (any https URL for
+ * self-hosted GitLab), so an instance answering with `file://` or a
  * foreign host would otherwise make the server clone or push any repository
  * it can reach. Returns the URL; throws with a message fit for the client.
  */

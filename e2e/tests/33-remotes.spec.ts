@@ -6,10 +6,10 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 /**
- * GitLab as a second remote provider (Stage A) and Gitea/Forgejo as a third.
+ * GitLab as a second remote provider (Stage A) and Gitee as a third.
  * The app server talks to tests/mock-gitlab.mjs (GITLAB_API_BASE) and
- * tests/mock-gitea.mjs (GITEA_API_BASE), whose projects are real bare repos
- * under .data-e2e-gitlab and .data-e2e-gitea, so clone/push/pull run against
+ * tests/mock-gitee.mjs (GITEE_API_BASE), whose projects are real bare repos
+ * under .data-e2e-gitlab and .data-e2e-gitee, so clone/push/pull run against
  * actual git. The connection lives server-side (META_DIR=.secrets-e2e), so it
  * carries across tests and runs: every test that needs a state establishes
  * it itself.
@@ -19,10 +19,10 @@ const MOCK = `http://localhost:${GITLAB}`;
 const AUTH = { authorization: 'Bearer x' };
 const GITLAB_DATA = path.resolve(__dirname, '../../.data-e2e-gitlab');
 const BARE = path.join(GITLAB_DATA, 'grp/sub/paper.git');
-const GITEA = Number(process.env.E2E_GITEA_PORT || 4923);
-const GITEA_MOCK = `http://localhost:${GITEA}`;
-const GITEA_DATA = path.resolve(__dirname, '../../.data-e2e-gitea');
-const GITEA_BARE = path.join(GITEA_DATA, 'e2e-user/paper.git');
+const GITEE = Number(process.env.E2E_GITEE_PORT || 4923);
+const GITEE_MOCK = `http://localhost:${GITEE}`;
+const GITEE_DATA = path.resolve(__dirname, '../../.data-e2e-gitee');
+const GITEE_BARE = path.join(GITEE_DATA, 'e2e-user/paper.git');
 
 const git = (args: string[], cwd?: string) =>
   execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
@@ -50,7 +50,7 @@ test.describe('remote providers on Home', () => {
     await page.goto('/');
     await expect(page.getByTestId('new-from-github')).toBeVisible();
     await expect(page.getByTestId('new-from-gitlab')).toBeVisible();
-    await expect(page.getByTestId('new-from-gitea')).toHaveText('From Gitea / Forgejo');
+    await expect(page.getByTestId('new-from-gitee')).toHaveText('From Gitee');
   });
 
   test('first-run onboarding offers all three git hosts', async ({ browser }) => {
@@ -61,7 +61,7 @@ test.describe('remote providers on Home', () => {
       await expect(p.getByTestId('onboarding')).toBeVisible({ timeout: 10_000 });
       await expect(p.getByTestId('onboard-github')).toBeVisible();
       await expect(p.getByTestId('onboard-gitlab')).toBeVisible();
-      await expect(p.getByTestId('onboard-gitea')).toContainText('Import from Gitea / Forgejo');
+      await expect(p.getByTestId('onboard-gitee')).toContainText('Import from Gitee');
     } finally { await ctx.close(); }
   });
 
@@ -69,63 +69,54 @@ test.describe('remote providers on Home', () => {
     const res = await request.get('/api/remotes');
     expect(res.ok()).toBeTruthy();
     const list: { id: string; label: string; changeRequestLabel: string; selfHosted: boolean; baseUrlRequired: boolean; oauth: boolean }[] = await res.json();
-    expect(list.map((r) => r.id).sort()).toEqual(['gitea', 'github', 'gitlab']);
-    expect(Object.fromEntries(list.map((r) => [r.id, r.label]))).toEqual({ gitea: 'Gitea / Forgejo', github: 'GitHub', gitlab: 'GitLab' });
+    expect(list.map((r) => r.id).sort()).toEqual(['gitee', 'github', 'gitlab']);
+    expect(Object.fromEntries(list.map((r) => [r.id, r.label]))).toEqual({ gitee: 'Gitee', github: 'GitHub', gitlab: 'GitLab' });
     expect(list.find((r) => r.id === 'gitlab')?.changeRequestLabel).toBe('merge request');
-    expect(list.find((r) => r.id === 'gitea')).toMatchObject({ changeRequestLabel: 'pull request', selfHosted: true, baseUrlRequired: true, oauth: false });
+    expect(list.find((r) => r.id === 'gitee')).toMatchObject({ changeRequestLabel: 'pull request', selfHosted: false, baseUrlRequired: false, oauth: false });
   });
 
-  test('the Gitea / Forgejo connect dialog always asks for the instance URL', async ({ page }) => {
+  test('the Gitee connect dialog takes just a token', async ({ page }) => {
     await page.goto('/');
-    await page.getByTestId('new-from-gitea').click();
-    await expect(page.getByTestId('gitea-import')).toBeVisible();
-    const disconnect = page.getByTestId('gitea-disconnect');
-    const tokenInput = page.getByTestId('gitea-token');
+    await page.getByTestId('new-from-gitee').click();
+    await expect(page.getByTestId('gitee-import')).toBeVisible();
+    const disconnect = page.getByTestId('gitee-disconnect');
+    const tokenInput = page.getByTestId('gitee-token');
     await expect(disconnect.or(tokenInput)).toBeVisible();
     if (await disconnect.isVisible()) await disconnect.click();
     await expect(tokenInput).toBeVisible();
-    // no self-hosted toggle: every instance is one, so the field is there from the start
-    await expect(page.getByTestId('gitea-selfhosted-toggle')).toHaveCount(0);
-    const baseUrl = page.getByTestId('gitea-baseurl');
-    await expect(baseUrl).toBeVisible();
-    await expect(baseUrl).toHaveAttribute('placeholder', 'https://codeberg.org');
-    // a token without an instance is refused client-side before any request
-    await tokenInput.fill('e2e-token');
-    await page.getByTestId('gitea-connect').click();
-    await expect(page.locator('.toast').filter({ hasText: 'instance URL' })).toBeVisible();
-    await expect(tokenInput).toBeVisible();
+    // one canonical host: nothing to configure, no instance field to show
+    await expect(page.getByTestId('gitee-selfhosted-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('gitee-baseurl')).toHaveCount(0);
   });
 });
 
-test.describe('Gitea / Forgejo sync', () => {
+test.describe('Gitee sync', () => {
   test.describe.configure({ mode: 'serial' });
   let projectId = '';
 
-  test('PAT connect with the instance URL, then import', async ({ page }) => {
+  test('PAT connect, then import', async ({ page }) => {
     await page.goto('/');
-    await page.getByTestId('new-from-gitea').click();
-    await expect(page.getByTestId('gitea-import')).toBeVisible();
-    const disconnect = page.getByTestId('gitea-disconnect');
-    const tokenInput = page.getByTestId('gitea-token');
+    await page.getByTestId('new-from-gitee').click();
+    await expect(page.getByTestId('gitee-import')).toBeVisible();
+    const disconnect = page.getByTestId('gitee-disconnect');
+    const tokenInput = page.getByTestId('gitee-token');
     await expect(disconnect.or(tokenInput)).toBeVisible();
     if (await disconnect.isVisible()) { await disconnect.click(); await expect(tokenInput).toBeVisible(); }
-    // GITEA_API_BASE relaxes the https rule for the mock, so an http instance is accepted here
-    await page.getByTestId('gitea-baseurl').fill(`http://localhost:${GITEA}`);
     await tokenInput.fill('e2e-token');
-    await page.getByTestId('gitea-connect').click();
+    await page.getByTestId('gitee-connect').click();
 
-    await expect(page.getByTestId('gitea-repos')).toBeVisible();
-    await expect(page.getByTestId('gitea-import')).toContainText('Connected as e2e-user');
-    const repo = page.getByTestId('gitea-repo-e2e-user/paper');
+    await expect(page.getByTestId('gitee-repos')).toBeVisible();
+    await expect(page.getByTestId('gitee-import')).toContainText('Connected as e2e-user');
+    const repo = page.getByTestId('gitee-repo-e2e-user/paper');
     await expect(repo).toBeVisible();
     await repo.click();
 
     await expect(page.getByTestId('editor-shell')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('gitea-sync')).toBeVisible();
+    await expect(page.getByTestId('gitee-sync')).toBeVisible();
     projectId = new URL(page.url()).pathname.split('/').pop()!;
     expect(projectId).toBeTruthy();
     await openFile(page, 'main.tex');
-    await expect(page.locator('.cm-content')).toContainText('Hello from Forgejo');
+    await expect(page.locator('.cm-content')).toContainText('Hello from Gitee');
   });
 
   test('push reaches the bare repo, a branch and a pull request follow', async ({ page }) => {
@@ -141,35 +132,35 @@ test.describe('Gitea / Forgejo sync', () => {
     await expect(page.getByTestId('editor-shell')).toBeVisible();
     await openFile(page, 'main.tex');
     const content = page.locator('.cm-content');
-    await expect(content).toContainText('Hello from Forgejo');
+    await expect(content).toContainText('Hello from Gitee');
 
     const marker = `E2E-MARKER-${Date.now()}`;
-    await page.locator('.cm-line', { hasText: 'Hello from Forgejo' }).click();
+    await page.locator('.cm-line', { hasText: 'Hello from Gitee' }).click();
     await page.keyboard.type(` ${marker}`);
     await expect(content).toContainText(marker);
 
-    await page.getByTestId('gitea-push-btn').click();
-    await expect(page.getByTestId('push-dialog')).toContainText('Push to Gitea / Forgejo');
+    await page.getByTestId('gitee-push-btn').click();
+    await expect(page.getByTestId('push-dialog')).toContainText('Push to Gitee');
     await page.getByTestId('push-message').fill('Add e2e marker');
     await page.getByTestId('push-confirm').click();
-    await expect(page.locator('.toast').filter({ hasText: 'Pushed to Gitea / Forgejo' })).toBeVisible();
-    expect(git(['--git-dir', GITEA_BARE, 'show', 'main:main.tex'])).toContain(marker);
+    await expect(page.locator('.toast').filter({ hasText: 'Pushed to Gitee' })).toBeVisible();
+    expect(git(['--git-dir', GITEE_BARE, 'show', 'main:main.tex'])).toContain(marker);
 
-    const chip = page.getByTestId('gitea-branch');
+    const chip = page.getByTestId('gitee-branch');
     await expect(chip).toContainText('main');
     await chip.click();
-    await expect(page.getByTestId('gitea-branch-menu')).toBeVisible();
-    await expect(page.getByTestId('gitea-open-pr')).toHaveCount(0);
+    await expect(page.getByTestId('gitee-branch-menu')).toBeVisible();
+    await expect(page.getByTestId('gitee-open-pr')).toHaveCount(0);
     const branch = `feature-${Date.now()}`;
-    await page.getByTestId('gitea-new-branch').fill(branch);
-    await page.getByTestId('gitea-create-branch').click();
+    await page.getByTestId('gitee-new-branch').fill(branch);
+    await page.getByTestId('gitee-create-branch').click();
     await expect(page.locator('.toast').filter({ hasText: `Created branch ${branch}` })).toBeVisible();
     await expect(chip).toContainText(branch);
-    expect(git(['--git-dir', GITEA_BARE, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'])).toContain(branch);
+    expect(git(['--git-dir', GITEE_BARE, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'])).toContain(branch);
 
     await chip.click();
-    await expect(page.getByTestId('gitea-branch-menu')).toBeVisible();
-    await page.getByTestId('gitea-open-pr').click();
+    await expect(page.getByTestId('gitee-branch-menu')).toBeVisible();
+    await page.getByTestId('gitee-open-pr').click();
     const dialog = page.getByTestId('pr-dialog');
     await expect(dialog.locator('h2')).toHaveText('Open pull request');
     await expect(dialog).not.toContainText('merge request');
@@ -178,7 +169,7 @@ test.describe('Gitea / Forgejo sync', () => {
     await expect(page.locator('.toast').filter({ hasText: /Opened pull request #\d+/ })).toBeVisible();
     await expect.poll(() => page.evaluate(() => (window as any).__opened)).toEqual([expect.stringContaining('/pulls/')]);
 
-    const res = await page.request.get(`${GITEA_MOCK}/__pulls`);
+    const res = await page.request.get(`${GITEE_MOCK}/__pulls`);
     expect(res.ok()).toBeTruthy();
     const list: { repo: string; head: string; base: string; title: string }[] = await res.json();
     const mine = list.filter((m) => m.repo === 'e2e-user/paper' && m.title === 'E2E pull request');
@@ -186,40 +177,39 @@ test.describe('Gitea / Forgejo sync', () => {
     expect(mine[0]).toMatchObject({ head: branch, base: 'main' });
   });
 
-  test('publish dialog lists Gitea / Forgejo and publishes to it', async ({ page, request }) => {
+  test('publish dialog lists Gitee and publishes to it', async ({ page, request }) => {
     // a re-run (or retry) must not hit "already exists" on the mock
-    await request.get(`${GITEA_MOCK}/__delete/${encodeURIComponent('e2e-user/forge-paper')}`);
+    await request.get(`${GITEE_MOCK}/__delete/${encodeURIComponent('e2e-user/gitee-paper')}`);
 
     await page.goto('/');
     await page.getByTestId('new-project').click();
-    await page.getByTestId('new-project-name').fill('Publish To Forgejo');
+    await page.getByTestId('new-project-name').fill('Publish To Gitee');
     await page.getByTestId('create-project').click();
     await expect(page.getByTestId('editor-shell')).toBeVisible();
-    await expect(page.getByTestId('gitea-sync')).toHaveCount(0);
+    await expect(page.getByTestId('gitee-sync')).toHaveCount(0);
 
     await page.getByTestId('remote-publish-open').click();
     const modal = page.getByTestId('remote-publish');
     await expect(modal).toBeVisible();
-    await expect(page.getByTestId('remote-publish-provider-gitea')).toHaveText('Gitea / Forgejo');
-    await page.getByTestId('remote-publish-provider-gitea').click();
-    await expect(modal).toContainText('Publish to Gitea / Forgejo');
+    await expect(page.getByTestId('remote-publish-provider-gitee')).toHaveText('Gitee');
+    await page.getByTestId('remote-publish-provider-gitee').click();
+    await expect(modal).toContainText('Publish to Gitee');
 
     const nameInput = page.getByTestId('publish-repo-name');
-    await expect(nameInput.or(page.getByTestId('gitea-token'))).toBeVisible();
+    await expect(nameInput.or(page.getByTestId('gitee-token'))).toBeVisible();
     if (!(await nameInput.isVisible())) {
-      await page.getByTestId('gitea-baseurl').fill(`http://localhost:${GITEA}`);
-      await page.getByTestId('gitea-token').fill('e2e-token');
-      await page.getByTestId('gitea-connect').click();
+      await page.getByTestId('gitee-token').fill('e2e-token');
+      await page.getByTestId('gitee-connect').click();
     }
     await expect(nameInput).toBeVisible();
-    await nameInput.fill('forge-paper');
-    await expect(page.getByTestId('publish-submit')).toContainText('Publish to Gitea / Forgejo as forge-paper');
+    await nameInput.fill('gitee-paper');
+    await expect(page.getByTestId('publish-submit')).toContainText('Publish to Gitee as gitee-paper');
     await page.getByTestId('publish-submit').click();
 
-    await expect(page.locator('.toast').filter({ hasText: 'Published to e2e-user/forge-paper' })).toBeVisible();
+    await expect(page.locator('.toast').filter({ hasText: 'Published to e2e-user/gitee-paper' })).toBeVisible();
     await expect(modal).toHaveCount(0);
-    await expect(page.getByTestId('gitea-sync')).toBeVisible();
-    expect(git(['--git-dir', path.join(GITEA_DATA, 'e2e-user/forge-paper.git'), 'show', 'main:main.tex'])).toContain('\\documentclass');
+    await expect(page.getByTestId('gitee-sync')).toBeVisible();
+    expect(git(['--git-dir', path.join(GITEE_DATA, 'e2e-user/gitee-paper.git'), 'show', 'main:main.tex'])).toContain('\\documentclass');
   });
 });
 

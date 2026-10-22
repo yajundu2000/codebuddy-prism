@@ -28,7 +28,7 @@ export interface ProjectSummary {
   remotePending?: { provider: 'gitlab'; namespace: string } | null;
 }
 
-export type RemoteProviderId = 'github' | 'gitlab' | 'gitea';
+export type RemoteProviderId = 'github' | 'gitlab' | 'gitee';
 /** A provider the server offers (honours its REMOTE_PROVIDERS allowlist). */
 /** `provisioning`: new projects are also created on this host (GitLab with a service token). */
 export interface RemoteInfo { id: RemoteProviderId; label: string; oauth: boolean; selfHosted: boolean; baseUrlRequired?: boolean; changeRequestLabel: 'pull request' | 'merge request'; provisioning: boolean }
@@ -38,7 +38,7 @@ export interface RemoteRepo { fullName: string; name: string; owner: string; pri
 export interface RemoteStatus { connected: boolean; login?: string; baseUrl?: string; oauth: boolean; selfHosted: boolean; baseUrlRequired?: boolean }
 /** `createdByAldine` marks a repository Aldine provisioned (deleted with the
  *  project); an imported one is never deleted by the server. */
-/** `baseUrl` is the instance the link was made on (self-hosted GitLab, every Gitea/Forgejo instance). */
+/** `baseUrl` is the instance the link was made on (self-hosted GitLab). */
 export interface RemoteLink { provider: RemoteProviderId; fullName: string; owner: string; repo: string; remoteBranch: string; cloneUrl: string; baseUrl?: string; connectedBy?: string; createdByAldine?: boolean }
 /** A group under the configured GitLab root; `fullPath` is what create/import send as `namespace`. */
 export interface GitlabNamespace { fullPath: string; name: string }

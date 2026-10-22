@@ -1,15 +1,15 @@
 import { db } from './db/index.js';
 import { github } from './github.js';
 import { gitlab } from './gitlab.js';
-import { gitea } from './gitea.js';
+import { gitee } from './gitee.js';
 import type { RemoteConnection, RemoteProvider, RemoteProviderId } from './remote-types.js';
 import type { RemoteLink } from './db/types.js';
 
 export * from './remote-types.js';
 
-const ALL: RemoteProvider[] = [github, gitlab, gitea];
+const ALL: RemoteProvider[] = [github, gitlab, gitee];
 
-/** Providers this deployment offers. REMOTE_PROVIDERS="github" hides GitLab and Gitea entirely (routes 404). */
+/** Providers this deployment offers. REMOTE_PROVIDERS="github" hides GitLab and Gitee entirely (routes 404). */
 export function providers(): RemoteProvider[] {
   const raw = (process.env.REMOTE_PROVIDERS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   if (!raw.length) return ALL;
@@ -43,7 +43,7 @@ export function linkInstance(link: RemoteLink): string | null {
   } catch { return null; }
 }
 
-/** A connection serves a link only on the link's instance: every Gitea connection, and every PAT GitLab connection, names its own host. */
+/** A connection serves a link only on the link's instance: a PAT GitLab connection names its own host. */
 function onLinkInstance(link: RemoteLink, conn: RemoteConnection): boolean {
   const provider = ALL.find((p) => p.id === link.provider);
   const at = linkInstance(link);

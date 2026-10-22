@@ -12,7 +12,7 @@ export default function RemoteConnectForm({ provider, status, onConnected }: {
 }) {
   const d = remoteDescriptor(provider);
   const [token, setToken] = useState('');
-  // A host without a canonical instance (Gitea / Forgejo) always takes a URL; the others offer it behind a toggle.
+  // A host without a canonical instance always takes a URL; the others offer it behind a toggle.
   const [selfHosted, setSelfHosted] = useState(d.baseUrlRequired);
   const [baseUrl, setBaseUrl] = useState('');
   const [busy, setBusy] = useState(false);

@@ -6,8 +6,8 @@ import { defineConfig } from '@playwright/test';
  *    `DATA_DIR=$(pwd)/.data-e2e PORT=4020 node apps/compiler/server.js` —
  *    the compiler must share the app server's DATA_DIR or every compile 404s)
  *  - it starts the app server (:3100), a mock Zotero API (:4919), a mock GitLab
- *    (:4921, real bare repos under .data-e2e-gitlab), a mock Gitea/Forgejo
- *    (:4923, .data-e2e-gitea) and Vite preview itself
+ *    (:4921, real bare repos under .data-e2e-gitlab), a mock Gitee
+ *    (:4923, .data-e2e-gitee) and Vite preview itself
  * Set ALDINE_URL to test an already-running stack (e.g. docker compose on :8080);
  * webServers are skipped via reuseExistingServer when ports are taken.
  */
@@ -17,7 +17,7 @@ const PORT = Number(process.env.E2E_PORT || 3100);
 const MOCK = Number(process.env.E2E_MOCK_PORT || 4919);
 const MOCK_AI = Number(process.env.E2E_MOCK_AI_PORT || 4926);
 const GITLAB = Number(process.env.E2E_GITLAB_PORT || 4921);
-const GITEA = Number(process.env.E2E_GITEA_PORT || 4923);
+const GITEE = Number(process.env.E2E_GITEE_PORT || 4923);
 const BASE = process.env.ALDINE_URL || `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -57,8 +57,8 @@ export default defineConfig({
       timeout: 10_000,
     },
     {
-      command: `E2E_GITEA_PORT=${GITEA} node tests/mock-gitea.mjs`,
-      port: GITEA,
+      command: `E2E_GITEE_PORT=${GITEE} node tests/mock-gitee.mjs`,
+      port: GITEE,
       reuseExistingServer: true,
       timeout: 10_000,
     },
@@ -82,7 +82,7 @@ export default defineConfig({
       // RL_MCP_BURST: the MCP specs make tens of calls a second from one IP
       // and one token; at the default 60-burst/1 s bucket 15-mcp drains it and
       // 16-agent-ui opens on 429s.
-      command: `npm run build -w apps/web && npm run build:viewer -w apps/server && PORT=${PORT} DATA_DIR=$(pwd)/.data-e2e META_DIR=$(pwd)/.secrets-e2e ALDINE_MCP=1 ALDINE_MCP_TOKEN=aldine-e2e-mcp RL_MCP_BURST=1000 ALDINE_AGENT_PRESENCE_TTL_MS=5000 ALDINE_TEST_HOOKS=1 GITLAB_API_BASE=http://localhost:${GITLAB} GITEA_API_BASE=http://localhost:${GITEA} VENUES_FILE=$(pwd)/.data-e2e/venues-e2e.json TEMPLATE_REPOS='[{"id":"lab","label":"Lab templates","url":"file://'"$(pwd)"'/.data-e2e/template-repo.git"}]' TEMPLATE_REPOS_REFRESH_MS=60000 OPENROUTER_API_KEY= OPENAI_API_KEY= ZOTERO_API_BASE=http://localhost:${MOCK} DOI_API_BASE=http://localhost:${MOCK} ARXIV_API_BASE=http://localhost:${MOCK} OPENALEX_API_BASE=http://localhost:${MOCK} ANTHROPIC_API_KEY=test-ai-key ANTHROPIC_BASE_URL=http://localhost:${MOCK} PRISM_AI_API_KEY=e2e-ai-key PRISM_AI_BASE_URL=http://localhost:${MOCK_AI}/v1 PRISM_AI_MODELS='[{"id":"mock-chat","label":"Mock Chat"}]' npx tsx apps/server/src/index.ts`,
+      command: `npm run build -w apps/web && npm run build:viewer -w apps/server && PORT=${PORT} DATA_DIR=$(pwd)/.data-e2e META_DIR=$(pwd)/.secrets-e2e ALDINE_MCP=1 ALDINE_MCP_TOKEN=aldine-e2e-mcp RL_MCP_BURST=1000 ALDINE_AGENT_PRESENCE_TTL_MS=5000 ALDINE_TEST_HOOKS=1 GITLAB_API_BASE=http://localhost:${GITLAB} GITEE_API_BASE=http://localhost:${GITEE} VENUES_FILE=$(pwd)/.data-e2e/venues-e2e.json TEMPLATE_REPOS='[{"id":"lab","label":"Lab templates","url":"file://'"$(pwd)"'/.data-e2e/template-repo.git"}]' TEMPLATE_REPOS_REFRESH_MS=60000 OPENROUTER_API_KEY= OPENAI_API_KEY= ZOTERO_API_BASE=http://localhost:${MOCK} DOI_API_BASE=http://localhost:${MOCK} ARXIV_API_BASE=http://localhost:${MOCK} OPENALEX_API_BASE=http://localhost:${MOCK} ANTHROPIC_API_KEY=test-ai-key ANTHROPIC_BASE_URL=http://localhost:${MOCK} PRISM_AI_API_KEY=e2e-ai-key PRISM_AI_BASE_URL=http://localhost:${MOCK_AI}/v1 PRISM_AI_MODELS='[{"id":"mock-chat","label":"Mock Chat"}]' npx tsx apps/server/src/index.ts`,
       cwd: '..',
       port: PORT,
       reuseExistingServer: true,

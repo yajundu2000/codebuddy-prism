@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import Modal from './Modal';
+import Brand from './Brand';
 import { shortcut } from '../platform';
 import { remoteDescriptor, RemoteProviderId } from '../remotes';
 /** First-run welcome shown once (localStorage-gated by the parent). One
@@ -15,7 +16,7 @@ export default function Onboarding({ onNew, onRemote, remotes, onImportZip, onCl
   return (
     <Modal onClose={onClose} label="Welcome to codebuddy-prism" testId="onboarding" wide>
       <div className="onboard">
-        <h1 className="home__brand" style={{ fontSize: 'var(--text-3xl)', marginBottom: 2 }}>codebuddy-prism<em>.</em></h1>
+        <Brand big />
         <p className="home__tag" style={{ marginBottom: 20 }}>Write LaTeX together — fast, versioned, yours.</p>
 
         <div className="onboard__tiles">
@@ -40,7 +41,7 @@ export default function Onboarding({ onNew, onRemote, remotes, onImportZip, onCl
         <ul className="onboard__points">
           <li><strong>Typeset</strong> with {shortcut('S')} — errors jump to the line; double-click the PDF to jump back.</li>
           <li><strong>Collaborate</strong> live — invite others, see their cursors, leave anchored comments.</li>
-          <li><strong>Version</strong> everything — branches, checkpoints, and full sync with GitHub, GitLab or Gitea.</li>
+          <li><strong>Version</strong> everything — branches, checkpoints, and full sync with GitHub, GitLab or Gitee.</li>
         </ul>
 
         <div className="modal__row" style={{ justifyContent: 'center', marginTop: 4 }}>

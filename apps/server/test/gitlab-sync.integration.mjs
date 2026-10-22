@@ -105,7 +105,7 @@ const projectDir = (id) => path.join(process.env.DATA_DIR, 'projects', id);
 // ---------- account level ----------
 let r = await app.inject({url: '/api/remotes'});
 const listed = J(r);
-check(r.statusCode === 200 && listed.map((p) => p.id).sort().join() === 'gitea,github,gitlab', 'all providers listed: ' + r.body);
+check(r.statusCode === 200 && listed.map((p) => p.id).sort().join() === 'gitee,github,gitlab', 'all providers listed: ' + r.body);
 check(listed.find((p) => p.id === 'gitlab').changeRequestLabel === 'merge request', 'gitlab noun is merge request');
 check(listed.find((p) => p.id === 'github').changeRequestLabel === 'pull request', 'github noun is pull request');
 check(listed.find((p) => p.id === 'gitlab').selfHosted === true, 'gitlab is self-hostable');

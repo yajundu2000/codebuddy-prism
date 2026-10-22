@@ -113,7 +113,7 @@ Rules:
 ## Your own template repository
 
 Put the layout above in any git repository — GitHub, GitLab (cloud or
-self-hosted), Gitea, Codeberg, a bare repository behind https — and list it
+self-hosted), Gitee, a bare repository behind https — and list it
 in `TEMPLATE_REPOS`. Aldine clones each repository shallowly into
 `CACHE_DIR/template-repos/<id>` at boot, refreshes it on an interval, and lists
 its templates under the repository's label. Projects created from them are

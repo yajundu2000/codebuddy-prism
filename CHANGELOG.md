@@ -4,6 +4,27 @@ All notable changes to Aldine are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [SemVer](https://semver.org/) (pre-1.0: minor bumps may break things).
 
+## [Unreleased]
+
+### Changed
+- Home redesign after the test1.fig mockup: prism monogram + Manrope wordmark
+  brand lockup (shared by the login, consent, and admin screens), a
+  "Your projects" header with the primary actions moved into it, a dedicated
+  "Start from existing work" import section, a "Recent projects" list header
+  with a count (newest first), and project cards with an accent icon tile and
+  an "Open project" footer row.
+- Palette shift: the dark theme's grays are now deep navy (`#12141c` family)
+  and the accent family moved from indigo to violet (`#6c5ce7` fills);
+  Inter Variable (UI) and Manrope Variable (display) are self-hosted via
+  `@fontsource-variable` — no runtime font CDN.
+- Gitee (码云, gitee.com) replaces Gitea / Forgejo as the third remote
+  provider — the host mainland-China users can actually reach. One canonical
+  instance, so connecting takes just a personal access token (default
+  scopes); `gitea` leaves the provider union (`REMOTE_PROVIDERS` default is
+  now `github,gitlab,gitee`; existing gitea links report the provider as
+  disabled), and `GITEE_API_BASE` replaces `GITEA_API_BASE` as the tests-only
+  API override.
+
 ## [0.1.0] — 2026-10-16
 
 First release of codebuddy-prism, a fork of Aldine.

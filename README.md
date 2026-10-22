@@ -52,17 +52,17 @@ Live collaboration, a recompile, and a SyncTeX jump, in one real recording (comp
   presence, conflict-free by construction. Unlimited collaborators.
 - **Git-native with branches**: every project is a real git repository.
   Create branches, edit them independently, merge back from the UI. Publish a
-  project to GitHub, GitLab, Gitea or Forgejo and a co-author can clone it and
+  project to GitHub, GitLab or Gitee and a co-author can clone it and
   keep using VS Code; their commits come back with one Pull.
 - **Fast, sandboxed compiles**: TeX Live + latexmk with persistent
   incremental builds (~2s warm recompiles) in a no-egress container with
   restricted shell-escape; errors surfaced with line numbers and
   click-to-jump.
-- **GitHub/GitLab/Gitea/Forgejo sync**: import from GitHub, GitLab, Gitea or
-  Forgejo as a project *or publish a local project to a fresh repo*, push/pull
+- **GitHub/GitLab/Gitee sync**: import from GitHub, GitLab or Gitee as a
+  project *or publish a local project to a fresh repo*, push/pull
   with ahead/behind indicators, branches, conflict resolution, server-side
   autopush, and open a pull or merge request, all from the editor. gitlab.com
-  and self-hosted GitLab, any Gitea or Forgejo instance (Codeberg included);
+  and self-hosted GitLab, gitee.com (the host mainland-China users can reach);
   a personal access token needs no OAuth app. A team instance can create
   every new project in a GitLab group automatically and push every autosave
   from the server.
@@ -222,7 +222,7 @@ you switch compose files later and what `deploy/backup.sh` looks for.
 | Real-time collaboration | ✅ CRDT, unlimited collaborators | ✅ ([source][ol-repo]) | ❌ (async via git) |
 | Review comments / suggested edits | ✅ | ❌ commenting and track changes are Server Pro only ([source][ol-cmp]) | PR reviews |
 | Git branches from the UI | ✅ projects *are* git repos | ❌ git integration is Server Pro only ([source][ol-cmp]) | ✅ (it *is* git) |
-| GitHub/GitLab/Gitea sync + PRs/MRs from the editor | ✅ | Overleaf documents GitHub synchronization as "a premium feature for Overleaf Cloud users" ([source][ol-gitdocs]); absent from its on-premises comparison ([source][ol-cmp]) | ✅ natively |
+| GitHub/GitLab/Gitee sync + PRs/MRs from the editor | ✅ | Overleaf documents GitHub synchronization as "a premium feature for Overleaf Cloud users" ([source][ol-gitdocs]); absent from its on-premises comparison ([source][ol-cmp]) | ✅ natively |
 | Zotero | Whole library **or one collection** | Overleaf lists Zotero among the third-party integrations of its cloud platform ([source][ol-onprem]); absent from its on-premises comparison ([source][ol-cmp]) | Via Better BibTeX auto-export |
 | Warm recompile | ~2s (persistent latexmk cache) | Not measured | Local |
 | Templates gallery | 4 built-in, plus your own from git repositories | ❌ private template management is Server Pro only ([source][ol-cmp]) | CTAN / your own |
@@ -283,7 +283,7 @@ docker run -d -p 4020:4020 -v $PWD/.data:/data aldine-compiler
 npm run typecheck -w apps/web && npm run test -w apps/web   # tsc + vitest
 npm run test:github -w apps/server                          # GitHub-sync integration
 npm run test:gitlab -w apps/server                          # GitLab-sync integration
-npm run test:gitea -w apps/server                           # Gitea/Forgejo-sync integration
+npm run test:gitee -w apps/server                           # Gitee-sync integration
 npm run test:db -w apps/server                              # datastore conformance
 ```
 
@@ -350,8 +350,8 @@ GITHUB_CLIENT_SECRET=
 GITLAB_URL=https://gitlab.com
 GITLAB_CLIENT_ID=
 GITLAB_CLIENT_SECRET=
-# Gitea / Forgejo sync needs nothing here: users paste a token and their instance URL
-# REMOTE_PROVIDERS=github,gitlab,gitea   # hide a provider by leaving it out
+# Gitee sync needs nothing here: users paste a private-access token
+# REMOTE_PROVIDERS=github,gitlab,gitee   # hide a provider by leaving it out
 # Optional: every new project is also created on GitLab in this group (service
 # account PAT with scope api and Owner on the group). Off unless both are set.
 GITLAB_TOKEN=
@@ -464,7 +464,7 @@ The `aldine` API exposes `ui.registerSidebarPanel`, `editor.insertAtCursor`,
 A template is a folder with a `template.json` and the files to start from;
 the shipped ones live in `templates/`. A group that keeps its own thesis,
 poster or report templates puts the same layout in any git repository
-(GitHub, GitLab, Gitea, a bare repo over https), lists it in
+(GitHub, GitLab, Gitee, a bare repo over https), lists it in
 `TEMPLATE_REPOS`, and the templates appear in the gallery under the
 repository's name, refreshed on an interval or with "Refresh templates", with
 `{{PROJECT_NAME}}`, `{{AUTHOR}}` and `{{DATE}}` filled in on create. Layout,

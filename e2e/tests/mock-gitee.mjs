@@ -1,11 +1,11 @@
 /**
- * Mock Gitea/Forgejo REST v1 for e2e. Repositories are real bare git repos
- * under .data-e2e-gitea so the app's clone/push/fetch run against them; the
- * HTTP side answers just the calls apps/server/src/gitea.ts makes, in the
- * shapes of https://gitea.com/swagger.v1.json. Seeded with e2e-user/paper.
- * Any `Authorization: token …` works except `bad` (401) — that is how a spec
- * provokes the token-invalid path; a Bearer header is refused because that is
- * not Gitea's shape.
+ * Mock Gitee REST v5 for e2e. Repositories are real bare git repos under
+ * .data-e2e-gitee so the app's clone/push/fetch run against them; the HTTP
+ * side answers just the calls apps/server/src/gitee.ts makes, in the shapes
+ * of the live gitee.com/api/v5 responses (probed 2026-10). Seeded with
+ * e2e-user/paper. Any `access_token` query value works except `bad` (401) —
+ * that is how a spec provokes the token-invalid path; an Authorization header
+ * is refused because Gitee's PAT auth lives in the query, not a header.
  */
 import fs from 'node:fs';
 import http from 'node:http';
@@ -13,22 +13,21 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const port = Number(process.env.E2E_GITEA_PORT || 4923);
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.data-e2e-gitea');
+const port = Number(process.env.E2E_GITEE_PORT || 4923);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.data-e2e-gitee');
 fs.rmSync(root, { recursive: true, force: true });
 fs.mkdirSync(root, { recursive: true });
 
 const git = (cmd, cwd = root) => execSync(`git ${cmd}`, { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
 
 const LOGIN = 'e2e-user';
-const orgs = new Set(['e2e-org']);
-/** @type {Map<string, { id: number; fullName: string; owner: string; name: string; bare: string; private: boolean; createdAt: string }>} */
+/** @type {Map<string, { id: number; fullName: string; owner: string; slug: string; bare: string; private: boolean; createdAt: string }>} */
 const repos = new Map();
 let nextId = 100;
 const pulls = [];
 
 function createRepo(fullName, priv = true, seed = null) {
-  const [owner, name] = fullName.split('/');
+  const [owner, slug] = fullName.split('/');
   const bare = path.join(root, `${fullName}.git`);
   fs.mkdirSync(path.dirname(bare), { recursive: true });
   git(`init --bare -q -b main "${bare}"`);
@@ -44,27 +43,29 @@ function createRepo(fullName, priv = true, seed = null) {
     git('push -q origin main', work);
     fs.rmSync(work, { recursive: true, force: true });
   }
-  const r = { id: nextId++, fullName, owner, name, bare, private: priv, createdAt: new Date().toISOString() };
+  const r = { id: nextId++, fullName, owner, slug, bare, private: priv, createdAt: new Date().toISOString() };
   repos.set(fullName, r);
   return r;
 }
 
-const userJson = (login) => ({ id: login === LOGIN ? 7 : 8, login, full_name: login === LOGIN ? 'E2E User' : '' });
+const userJson = (login) => ({ id: login === LOGIN ? 7 : 8, login, name: login === LOGIN ? 'E2E User' : login, type: 'User' });
 const repoJson = (r) => ({
-  id: r.id, name: r.name, full_name: r.fullName, owner: userJson(r.owner), private: r.private,
-  default_branch: 'main', clone_url: `file://${r.bare}`, html_url: `http://localhost:${port}/${r.fullName}`,
+  id: r.id, path: r.slug, name: `${r.slug}的仓库`, full_name: r.fullName,
+  owner: userJson(r.owner), namespace: { type: 'user', path: r.owner },
+  private: r.private, default_branch: 'main',
+  https_url: `file://${r.bare}`, ssh_url: `git@gitee.com:${r.fullName}.git`, html_url: `http://localhost:${port}/${r.fullName}`,
   created_at: r.createdAt, updated_at: r.createdAt,
 });
 
 createRepo('e2e-user/paper', true, {
-  'main.tex': '\\documentclass{article}\n\\begin{document}\nHello from Forgejo\n\\end{document}\n',
+  'main.tex': '\\documentclass{article}\n\\begin{document}\nHello from Gitee\n\\end{document}\n',
   'README.md': '# paper\n',
 });
 
 const paginate = (list, url) => {
-  const limit = Math.min(Number(url.searchParams.get('limit')) || 30, 50);
+  const per = Math.min(Math.max(Number(url.searchParams.get('per_page')) || 20, 1), 100);
   const page = Math.max(Number(url.searchParams.get('page')) || 1, 1);
-  return list.slice((page - 1) * limit, page * limit);
+  return list.slice((page - 1) * per, page * per);
 };
 
 const server = http.createServer((req, res) => {
@@ -82,8 +83,8 @@ const server = http.createServer((req, res) => {
     if (r) { fs.rmSync(r.bare, { recursive: true, force: true }); repos.delete(key); }
     return send(200, { deleted: !!r });
   }
-  const m = /^token (\S+)$/.exec(req.headers.authorization || '');
-  if (!m || m[1] === 'bad') return send(401, { message: 'token is required' });
+  const token = url.searchParams.get('access_token');
+  if (!token || token === 'bad') return send(401, { message: '401 Unauthorized' });
 
   let raw = '';
   req.on('data', (c) => { raw += c; });
@@ -97,13 +98,9 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && url.pathname === '/user') return send(200, userJson(LOGIN));
     if (segs[0] === 'user' && segs[1] === 'repos' && req.method === 'GET') return send(200, paginate([...repos.values()].map(repoJson), url));
     if (segs[0] === 'user' && segs[1] === 'repos' && req.method === 'POST') return create(LOGIN, body);
-    if (segs[0] === 'orgs' && segs[2] === 'repos' && req.method === 'POST') {
-      if (!orgs.has(segs[1])) return send(404, { message: 'organization does not exist' });
-      return create(segs[1], body);
-    }
     if (segs[0] === 'repos' && segs.length >= 3) {
       const r = repos.get(`${segs[1]}/${segs[2]}`);
-      if (!r) return send(404, { message: 'The target couldn\'t be found.' });
+      if (!r) return send(404, { message: '404 The repository does not exist' });
       if (segs.length === 3 && req.method === 'GET') return send(200, repoJson(r));
       if (segs[3] === 'branches' && req.method === 'GET') {
         const names = git(`--git-dir="${r.bare}" for-each-ref --format="%(refname:short)" refs/heads`).split('\n').filter(Boolean);
@@ -119,10 +116,10 @@ const server = http.createServer((req, res) => {
 
     function create(owner, opts) {
       const fullName = `${owner}/${opts.name}`;
-      if (repos.has(fullName)) return send(409, { message: 'The repository with the same name already exists.' });
+      if (repos.has(fullName)) return send(409, { message: 'The repository with the same name already exists' });
       return send(201, repoJson(createRepo(fullName, !!opts.private)));
     }
   }
 });
 
-server.listen(port, () => console.log(`[mock-gitea] on :${port}, repos under ${root}`));
+server.listen(port, () => console.log(`[mock-gitee] on :${port}, repos under ${root}`));

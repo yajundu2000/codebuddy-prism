@@ -31,9 +31,9 @@ const GITLAB_ICON = (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 5.45H7.582L4.919 1.263a.455.455 0 0 0-.867 0L1.386 9.452.044 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.625-8.443a.92.92 0 0 0 .33-1.024"/></svg>
 );
 
-/* A tea cup: neither Gitea's nor Forgejo's logo, so neither project's mark is misused for the other. */
-const GITEA_ICON = (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M4 9h12v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 3c0 1.5 1 1.5 1 3M12 3c0 1.5 1 1.5 1 3"/></svg>
+/* A cloud outline (码云, "code cloud"): not Gitee's logo — same trademark caution as the icons above. */
+const GITEE_ICON = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6.5 6.5 0 0 0-12.3 2A4 4 0 0 0 6 19Z"/></svg>
 );
 
 export const REMOTES: Record<RemoteProviderId, RemoteDescriptor> = {
@@ -61,17 +61,17 @@ export const REMOTES: Record<RemoteProviderId, RemoteDescriptor> = {
     defaultBaseUrl: 'https://gitlab.com',
     baseUrlPlaceholder: 'https://gitlab.example.org',
   },
-  gitea: {
-    id: 'gitea',
-    label: 'Gitea / Forgejo',
-    icon: GITEA_ICON,
+  gitee: {
+    id: 'gitee',
+    label: 'Gitee',
+    icon: GITEE_ICON,
     changeRequest: 'pull request',
-    tokenPlaceholder: 'Gitea or Forgejo token (needs read:user and write:repository)',
-    tokenHelp: 'Create one on your instance under Settings → Applications → Manage access tokens, with read:user and write:repository. Codeberg runs Forgejo.',
-    selfHosted: true,
-    baseUrlRequired: true,
-    defaultBaseUrl: 'https://codeberg.org',
-    baseUrlPlaceholder: 'https://codeberg.org',
+    tokenPlaceholder: 'Gitee personal access token',
+    tokenHelp: 'Create one at gitee.com → 设置 → 私人令牌 (Personal access tokens); the default scopes (user_info, projects, pull_requests) are enough.',
+    selfHosted: false,
+    baseUrlRequired: false,
+    defaultBaseUrl: 'https://gitee.com',
+    baseUrlPlaceholder: 'https://gitee.com',
   },
 };
 
