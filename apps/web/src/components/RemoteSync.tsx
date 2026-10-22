@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, RemoteLink } from '../api';
 import { remoteDescriptor, sentence } from '../remotes';
 import { useToast } from './Toast';
-import { useDialogs } from './Dialogs';
 import { useExitGhost } from '../exitGhost';
 
 /** Toolbar control for a project linked to a git host: branch switch/create
@@ -37,7 +36,6 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
   // The linked repository is gone from the host: the server's message doubles as the flag.
   const [gone, setGone] = useState<string | null>(null);
   const toast = useToast();
-  const dialogs = useDialogs();
   const leave = useExitGhost();
 
   const refresh = useCallback(async () => {
@@ -62,19 +60,12 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
     setBusy('');
   };
 
-  /** Owner-only: drop the link so the project can be published again. Nothing is deleted on the host. */
+  /** Owner-only, offered only for a repository the host no longer has: drop
+   *  the link so the project can be published again. Nothing is deleted on the
+   *  host. The push-dialog card is its own confirmation. */
   const unlinkNow = async () => {
     try { await api.remoteUnlink(projectId); toast(`Unlinked from ${link.fullName}`, 'ok'); onUnlinked(); }
     catch (err: any) { toast(err.message, 'error'); }
-  };
-  const unlink = async (why?: string) => {
-    if (!(await dialogs.confirm({
-      title: `Unlink from ${d.label}`,
-      body: why || `The project and its history stay here — only the link to ${link.fullName} is removed. Publish again to link a new repository.`,
-      confirmLabel: 'Unlink',
-      danger: true,
-    }))) return;
-    await unlinkNow();
   };
   const toggleAutopush = async () => {
     if (!isOwner || autopushBusy) return;
@@ -155,11 +146,6 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
                 <button className="btn btn--small" onClick={createBranch} data-testid={`${p}-create-branch`}>Create</button>
               </div>
               {!onDefault && <button className="gh-branch__item" onClick={() => { setMenu(false); setCrTitle(`Update ${branchInfo.current}`); setShowCr(true); }} data-testid={`${p}-open-pr`}>Open {d.changeRequest}…</button>}
-              {isOwner && (
-                <button className="gh-branch__item" onClick={() => { setMenu(false); unlink(); }} data-testid={`${p}-menu-unlink`}>
-                  Unlink repository…
-                </button>
-              )}
             </div>
           )}
         </div>

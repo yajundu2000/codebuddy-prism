@@ -28,9 +28,8 @@ All notable changes to Aldine are documented here. The format follows
 ### Added
 - Recovery for a repository deleted on the git host (any provider): the sync
   routes answer `410 remote-missing` with the repository named and the way
-  out, the push dialog turns into an Unlink card for a gone repository (the
-  branch menu carries an owner-only Unlink too), and
-  `DELETE /api/projects/:id/remote` clears the link so the project can be
+  out, and the push dialog turns into an Unlink card — the only place Unlink
+  appears. `DELETE /api/projects/:id/remote` clears the link so the project can be
   published to a new repository. Autopush stops itself for a gone repository
   instead of retrying every commit.
 
