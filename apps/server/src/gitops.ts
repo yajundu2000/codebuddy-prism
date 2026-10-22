@@ -641,7 +641,7 @@ export function stripCreds(url: string): string {
  * wording only occurs in tests (providers hand out https URLs), but real git
  * must be able to hit the marker there.
  */
-const REMOTE_GONE = /The requested URL returned error: 404|Repository not found|repository does not exist|does not appear to be a git repository/i;
+const REMOTE_GONE = /The requested URL returned error: 404|404 not found|repository not found|repository '[^']+' not found|repository does not exist|does not appear to be a git repository/i;
 export function isRemoteGone(err: any): boolean {
   return !!(err && typeof err.message === 'string' && REMOTE_GONE.test(err.message)) || err?.remoteMissing === true;
 }
@@ -650,7 +650,8 @@ async function scrubbed<T>(op: () => Promise<T>): Promise<T> {
   try { return await op(); }
   catch (err: any) {
     if (err && typeof err.message === 'string') {
-      const clean = stripCreds(err.message);
+      // hosts colour their remote messages (Gitee sends a red "404 not found!"); strip the escapes
+      const clean = stripCreds(err.message).replace(/\x1b\[[0-9;]*m/g, '');
       if (clean !== err.message || REMOTE_GONE.test(clean)) {
         const e = new Error(clean); e.name = err.name;
         if (REMOTE_GONE.test(clean)) (e as any).remoteMissing = true;
