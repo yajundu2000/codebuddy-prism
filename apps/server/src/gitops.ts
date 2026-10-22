@@ -646,15 +646,24 @@ export function isRemoteGone(err: any): boolean {
   return !!(err && typeof err.message === 'string' && REMOTE_GONE.test(err.message)) || err?.remoteMissing === true;
 }
 
+/** The account can read the repository (a public one, or one it collabs on)
+ *  but git refuses the write: 403. A distinct failure from gone — the fix is
+ *  another account or another repository, never a retry. */
+const REMOTE_NO_WRITE = /The requested URL returned error: 403|Access denied/i;
+export function isNoWriteAccess(err: any): boolean {
+  return !!(err && typeof err.message === 'string' && REMOTE_NO_WRITE.test(err.message)) || err?.noWriteAccess === true;
+}
+
 async function scrubbed<T>(op: () => Promise<T>): Promise<T> {
   try { return await op(); }
   catch (err: any) {
     if (err && typeof err.message === 'string') {
       // hosts colour their remote messages (Gitee sends a red "404 not found!"); strip the escapes
       const clean = stripCreds(err.message).replace(/\x1b\[[0-9;]*m/g, '');
-      if (clean !== err.message || REMOTE_GONE.test(clean)) {
+      if (clean !== err.message || REMOTE_GONE.test(clean) || REMOTE_NO_WRITE.test(clean)) {
         const e = new Error(clean); e.name = err.name;
         if (REMOTE_GONE.test(clean)) (e as any).remoteMissing = true;
+        if (REMOTE_NO_WRITE.test(clean)) (e as any).noWriteAccess = true;
         throw e;
       }
     }

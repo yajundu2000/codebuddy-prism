@@ -33,13 +33,16 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
   const [newName, setNewName] = useState('');
   const [crTitle, setCrTitle] = useState('');
   const [showCr, setShowCr] = useState(false);
-  // The linked repository is gone from the host: the server's message doubles as the flag.
+  // The linked repository is gone from the host, or refuses the connected
+  // account's writes: the server's message doubles as the flag either way —
+  // both offer the same Unlink way out in the push dialog.
   const [gone, setGone] = useState<string | null>(null);
+  const [noWrite, setNoWrite] = useState<string | null>(null);
   const toast = useToast();
   const leave = useExitGhost();
 
   const refresh = useCallback(async () => {
-    try { const s = await api.projectRemoteStatus(projectId); setStatus({ ahead: s.ahead, behind: s.behind }); setGone(null); }
+    try { const s = await api.projectRemoteStatus(projectId); setStatus({ ahead: s.ahead, behind: s.behind }); setGone(null); setNoWrite(null); }
     catch (err: any) {
       if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
       /* else: offline / no token */
@@ -52,9 +55,10 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
 
   const doPush = async (msg: string) => {
     setBusy('push'); setShowPush(false);
-    try { await api.remotePush(projectId, msg); toast(`Pushed to ${d.label}`, 'ok'); await refresh(); }
+    try { await api.remotePush(projectId, msg); toast(`Pushed to ${d.label}`, 'ok'); setNoWrite(null); await refresh(); }
     catch (err: any) {
       if (err?.reason === 'remote-missing') { setGone(err.message); setStatus(null); }
+      if (err?.reason === 'remote-no-write') setNoWrite(err.message);
       toast(err.message, 'error');
     }
     setBusy('');
@@ -173,10 +177,10 @@ export default function RemoteSync({ projectId, link, autopush, isOwner, onPulle
       {showPush && (
         <div className="modal-backdrop" onClick={() => setShowPush(false)}>
           <div className="modal" style={{ width: 420 }} onClick={(e) => e.stopPropagation()} data-testid="push-dialog">
-            {gone ? (
+            {gone || noWrite ? (
               <>
                 <h2 style={{ marginBottom: 8 }}>Push to {d.label}</h2>
-                <p style={{ fontSize: 'var(--text-s)', color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 4 }} data-testid="push-gone-message">{gone}</p>
+                <p style={{ fontSize: 'var(--text-s)', color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 4 }} data-testid="push-gone-message">{gone || noWrite}</p>
                 <p style={{ fontSize: 'var(--text-s)', color: 'var(--text-2)', lineHeight: 1.5 }}>
                   The project and its history stay here — only the link is removed.
                 </p>

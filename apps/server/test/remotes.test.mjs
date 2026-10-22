@@ -233,6 +233,12 @@ console.log('remotes: all assertions passed');
   check(!gone("fatal: could not read Username for 'https://gitee.com': No such device or address"), 'a missing credential is not a missing repository');
   check(!gone("fatal: unable to access 'https://gitee.com/o/r.git/': The requested URL returned error: 403"), 'a 403 is a permission problem, not a gone repository');
   check(!gone('fatal: unable to access: Connection refused'), 'a network failure is not a gone repository');
+  // ---------- no-write-access classification (the account can read, git refuses the write) ----------
+  const noWrite = (msg) => gitops.isNoWriteAccess(new Error(msg));
+  check(noWrite("remote: [session-7f4db095] Access denied fatal: unable to access 'https://gitee.com/yajundu/GZGS-CTEX2027.git/': The requested URL returned error: 403"), 'gitee live 403 wording classifies (user-reported 2026-10-22)');
+  check(noWrite("fatal: unable to access 'https://github.com/o/r.git/': The requested URL returned error: 403"), 'github 403 wording classifies');
+  check(!noWrite("fatal: unable to access 'https://gitee.com/o/r.git/': The requested URL returned error: 404"), 'a 404 is gone, not no-write');
+  check(!gitops.isRemoteGone(new Error("remote: Access denied")), 'sanity: gone and no-write stay separate');
 
   const fs = await import('node:fs'); const os = await import('node:os'); const path = await import('node:path');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aldine-scrub-'));

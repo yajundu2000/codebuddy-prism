@@ -1650,6 +1650,18 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     return true;
   };
 
+  /** The connected account can read the repository but git refuses the write:
+   *  no retry helps. The way out is a write-capable account, or unlinking to
+   *  publish under the account's own name. */
+  const noWriteReply = (reply: any, err: any, l: Linked, connLogin: string) => {
+    if (!gitops.isNoWriteAccess(err)) return false;
+    reply.code(403).send({
+      error: `${connLogin || 'The connected account'} cannot push to ${l.link.fullName} on ${l.provider.label} — the account has no write access there. Disconnect and connect an account with write access, or unlink this project to publish it as a repository of your own.`,
+      reason: 'remote-no-write',
+    });
+    return true;
+  };
+
   // Publish a locally-created project to a fresh repository. This is the only
   // way an unlinked project gains an off-server copy, so the editor nudges
   // toward it. Creates the repo under the connected account (or the given
@@ -1730,7 +1742,11 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       await gitops.pushToRemote(req.params.id, l.remoteBranch, l.url);
       if (head) lastPushedHead.set(req.params.id, head);
       return { ok: true };
-    } catch (err: any) { if (goneReply(reply, err, l)) return; return reply.code(400).send({ error: `Push failed: ${err.message}` }); }
+    } catch (err: any) {
+      if (goneReply(reply, err, l)) return;
+      if (noWriteReply(reply, err, l, l.conn.login)) return;
+      return reply.code(400).send({ error: `Push failed: ${err.message}` });
+    }
   });
 
   projectRoute('post', 'pull', async (req, reply) => {
