@@ -12,6 +12,8 @@ export interface PluginPanel {
   id: string;
   title: string;
   mount(el: HTMLElement): void;
+  /** Fires on every activation of the tab (mount itself happens once). */
+  onShow?(): void;
 }
 
 export interface PluginCtx {
@@ -22,6 +24,7 @@ export interface PluginCtx {
   insertAtCursor(text: string): void;
   refreshFiles(): Promise<unknown>;
   refreshProject(): Promise<unknown>;
+  openFile(path: string): void;
   compile(): void;
   toast(text: string, kind?: 'info' | 'error' | 'ok'): void;
 }
@@ -35,12 +38,14 @@ export interface AldineAPI {
     lastCompile(): { ok: boolean; errors: Array<{ type: string; line: number | null; message: string; file?: string }>; log: string } | null;
     refreshFiles(): Promise<unknown>;
     refresh(): Promise<unknown>;
+    /** Opens a file in the editor pane (a no-op for a path that is not in the tree). */
+    openFile(path: string): void;
   };
   editor: { insertAtCursor(text: string): void };
   compile(): void;
   toast(text: string, kind?: 'info' | 'error' | 'ok'): void;
   fetch(url: string, init?: RequestInit): Promise<Response>;
-  ui: { registerSidebarPanel(panel: { id: string; title: string; render(el: HTMLElement) : void }): void };
+  ui: { registerSidebarPanel(panel: { id: string; title: string; render(el: HTMLElement): void; onShow?(): void }): void };
 }
 
 interface Props {
@@ -65,6 +70,7 @@ export function PluginHost({ ctx, onPanels }: Props) {
         lastCompile: () => ctxRef.current.getCompileResult(),
         refreshFiles: () => ctxRef.current.refreshFiles(),
         refresh: () => ctxRef.current.refreshProject(),
+        openFile: (path: string) => ctxRef.current.openFile(path),
       },
       editor: { insertAtCursor: (t) => ctxRef.current.insertAtCursor(t) },
       compile: () => ctxRef.current.compile(),
@@ -73,7 +79,7 @@ export function PluginHost({ ctx, onPanels }: Props) {
       fetch: (url, init) => fetch(url.startsWith('/') ? withBase(url) : url, init),
       ui: {
         registerSidebarPanel(panel) {
-          panels.push({ id: `plugin:${panel.id}`, title: panel.title, mount: (el) => panel.render(el) });
+          panels.push({ id: `plugin:${panel.id}`, title: panel.title, mount: (el) => panel.render(el), onShow: panel.onShow });
         },
       },
     };

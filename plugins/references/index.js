@@ -17,9 +17,19 @@ export default {
     aldine.ui.registerSidebarPanel({
       id: 'references',
       title: 'Cite',
+      onShow() {
+        // The bibliography is the thing this panel works on: open the first
+        // non-Zotero .bib in the editor so a paste lands where the user sees it.
+        aldine.project.refreshFiles().then((files) => {
+          const bib = (Array.isArray(files) ? files : []).find((f) => f.type === 'file' && f.path.endsWith('.bib') && !f.path.endsWith('zotero.bib'));
+          if (bib) aldine.project.openFile(bib.path);
+        }).catch(() => {});
+      },
       render(root) {
         let busy = false;
         let query = '';
+        let citation = '';
+        let gbtBusy = false;
         let searchTerm = '';
         let results = [];
         let searching = false;
@@ -48,6 +58,30 @@ export default {
         };
 
         const add = () => { const q = query.trim(); if (q) { query = ''; addQuery(q, 'Lookup'); } };
+
+        // GB/T 7714-2025 paste → BibTeX: offline parse, appended to the
+        // project's bibliography (the server resolves which .bib that is).
+        const addGbt = async () => {
+          const c = citation.trim();
+          if (!c || gbtBusy) return;
+          gbtBusy = true; draw();
+          try {
+            const res = await aldine.fetch(`/api/projects/${aldine.project.id}/references/add-gbt`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ citation: c, branch: aldine.project.branch }),
+            });
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+            citation = '';
+            await aldine.project.refreshFiles();
+            if (body.bibFile) aldine.project.openFile(body.bibFile);
+            aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key} to ${body.bibFile}`, 'ok');
+          } catch (err) {
+            aldine.toast(err.message, 'error');
+          }
+          gbtBusy = false; draw();
+        };
 
         let searchTimer = null;
         const runSearch = () => {
@@ -103,6 +137,25 @@ export default {
             ));
           }
           if (results.length) wrap.append(list);
+
+          // --- GB/T 7714-2025 paste ---
+          wrap.append(
+            h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Or paste a GB/T 7714 reference'),
+            h('textarea', {
+              class: 'input',
+              placeholder: '[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究[J].新传奇,2026,(37):47-49.DOI:…',
+              style: { width: '100%', height: '72px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 },
+              dataset: { testid: 'gbt-citation-input' },
+              oninput: (e) => { citation = e.target.value; },
+            }, citation),
+            h('button', {
+              class: 'btn btn--primary',
+              style: { width: '100%', justifyContent: 'center' },
+              dataset: { testid: 'gbt-add' },
+              disabled: gbtBusy ? '' : null,
+              onclick: addGbt,
+            }, gbtBusy ? 'Adding…' : 'Convert & add'),
+          );
 
           // --- add by identifier ---
           wrap.append(

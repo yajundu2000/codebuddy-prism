@@ -28,6 +28,56 @@ test.describe('v0.2 features', () => {
     }
   });
 
+  test('paste a GB/T 7714 reference: the .bib opens and the entry appears highlighted', async ({ page, request }) => {
+    const id = await createProject(request, 'GB/T Cite');
+    try {
+      // a project bibliography the root file actually loads
+      await request.put(`/api/projects/${id}/file`, {
+        data: { branch: 'main', path: 'refs.bib', content: '@article{seed2020,\n  title = {Seed},\n  author = {甲一},\n  year = {2020},\n  journaltitle = {读书}\n}\n' },
+      });
+      const main = await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text();
+      await request.put(`/api/projects/${id}/file`, {
+        data: { branch: 'main', path: 'main.tex', content: main.replace('references.bib', 'refs.bib') },
+      });
+      await request.delete(`/api/projects/${id}/file?branch=main&path=references.bib`);
+
+      await openProject(page, id);
+      const tab = page.getByTestId('tab-plugin:references');
+      await expect(tab).toBeVisible({ timeout: 15_000 });
+      await tab.click();
+      // requirement 1: the tab opens the project's .bib in the editor
+      await expect(page.getByTestId('active-file')).toHaveText('refs.bib', { timeout: 15_000 });
+      await expect(page.locator('.cm-content')).toContainText('seed2020');
+
+      // requirements 2-4: paste, convert, the entry lands highlighted in the .bib
+      await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.locator('.cm-content')).toContainText('@article{XCQ202637047,', { timeout: 15_000 });
+      await expect(page.locator('.cm-content')).toContainText('新传奇');
+      // BibTeX highlighting is live: token spans carry the highlight style's
+      // hashed classes (HighlightStyle paints via stylesheet, not inline style)
+      await expect(page.locator('.cm-content .cm-line span[class^="ͼ"]').first()).toBeVisible();
+
+      const raw = await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text();
+      expect(raw).toContain('10.26938/j.cnki.CN42-1794/Z.2026.37.015');
+      expect(raw).toContain('seed2020'); // the seed entry survived
+
+      // pasting the same citation again is a duplicate, not a second entry
+      await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.locator('.toast').filter({ hasText: 'Already in bibliography' })).toBeVisible();
+      const entries = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
+      expect(entries.filter((e: { key: string }) => e.key === 'XCQ202637047')).toHaveLength(1);
+
+      // garbage gets the actionable 422, not a silent nothing
+      await page.getByTestId('gbt-citation-input').fill('随便一段没有标记的文字');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.locator('.toast').filter({ hasText: 'Could not parse' })).toBeVisible();
+    } finally {
+      await cleanup(request, id);
+    }
+  });
+
   test('drag-drop / picker upload adds a binary file', async ({ page, request }) => {
     const id = await createProject(request, 'Upload Test');
     try {

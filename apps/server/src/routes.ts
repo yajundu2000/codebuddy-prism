@@ -18,7 +18,7 @@ import { listPlugins, pluginAssetPath } from './plugins.js';
 import { listAllTemplates, resolveTemplateSeed, type TemplateSeed } from './templates.js';
 import { warmVenueCache } from './catalog.js';
 import { startTemplateRepoRefresh, syncAllTemplateRepos, templateRepoStates } from './templaterepos.js';
-import { addReference, fetchBibEntry, searchWorks } from './references.js';
+import { addGbtReference, addReference, fetchBibEntry, GbtParseError, resolveAppendBib, searchWorks } from './references.js';
 import { bibIndex, labelIndex, wordCount } from './indexes.js';
 import { unzip, zipEntryCount, ZipError } from './unzip.js';
 import { guessRoot, detectRoot, adoptRootIfUnset } from './root.js';
@@ -1351,14 +1351,29 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       if (!query) return reply.code(400).send({ error: 'query required' });
       if (!(await refLimiter.take(clientKey(req, reqUser(req)?.id)))) return reply.code(429).send({ error: 'Rate limit reached — please slow down' });
       try {
-        // default next to the root file (see zotero/link) so inserted cites
-        // land in a .bib the document actually reads
-        const bibFile = req.body?.bibFile || rootSiblingPath((await store.readMeta(req.params.id)).rootFile, 'references.bib');
+        // the .bib the document actually loads (see zotero/link), never the
+        // Zotero-managed file; rootSiblingPath only when the project has none
+        const bibFile = req.body?.bibFile || await resolveAppendBib(req.params.id, branch, await store.readMeta(req.params.id));
         if (isHiddenPath(bibFile)) return reply.code(403).send({ error: 'forbidden path' });
         const added = await addReference(req.params.id, branch, query, bibFile);
         if (!added) return reply.code(404).send({ error: 'No reference found for that DOI/arXiv id' });
         return { ok: true, ...added };
       } catch (err: any) {
+        return reply.code(502).send({ error: err.message });
+      }
+    });
+
+  // Paste a GB/T 7714-2025 reference (CNKI export) as a citation string;
+  // offline parse, no upstream lookup, no rate budget.
+  app.post<{ Params: { id: string }; Body: { citation: string; branch?: string; bibFile?: string } }>(
+    '/api/projects/:id/references/add-gbt', async (req, reply) => {
+      const { citation, branch = 'main' } = req.body || {};
+      if (!citation?.trim()) return reply.code(400).send({ error: 'citation required' });
+      if (req.body?.bibFile && isHiddenPath(req.body.bibFile)) return reply.code(403).send({ error: 'forbidden path' });
+      try {
+        return { ok: true, ...await addGbtReference(req.params.id, branch, citation, req.body?.bibFile) };
+      } catch (err: any) {
+        if (err instanceof GbtParseError) return reply.code(422).send({ error: err.message });
         return reply.code(502).send({ error: err.message });
       }
     });

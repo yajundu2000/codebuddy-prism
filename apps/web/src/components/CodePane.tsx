@@ -8,6 +8,7 @@ import { defaultKeymap, indentWithTab } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
 import { latex } from 'codemirror-lang-latex';
+import { bibtex } from '../editor/bibtex';
 import * as Y from 'yjs';
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next';
 import { HocuspocusProvider } from '@hocuspocus/provider';
@@ -337,7 +338,10 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
           // would disable ALL languageData sources (incl. our cite/ref completions);
           // its builtin command completions still register via languageData.
           // enableTooltips:false so our richer \cite hover (reference preview) is the only hover
-          latex({ autoCloseTags: true, enableLinting: false, enableAutocomplete: false, enableTooltips: false }),
+          // .bib gets the BibTeX parser; \cite completions still come from languageData below
+          filePath.endsWith('.bib')
+            ? bibtex()
+            : latex({ autoCloseTags: true, enableLinting: false, enableAutocomplete: false, enableTooltips: false }),
           citeCompletionSource(projectId, branch),
           refCompletionSource(projectId, branch, () => filePath),
           citeHoverTooltip(projectId, branch),

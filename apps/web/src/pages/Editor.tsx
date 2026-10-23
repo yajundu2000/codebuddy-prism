@@ -853,9 +853,10 @@ export default function Editor() {
     insertAtCursor,
     refreshFiles: loadFiles,
     refreshProject: loadProject,
+    openFile: (path: string) => { if (files.some((f) => f.path === path)) setActiveFile(path); },
     compile: doCompile,
     toast,
-  }), [id, branch, activeFile, compile.result, layout, insertAtCursor, loadFiles, loadProject, doCompile, toast]);
+  }), [id, branch, activeFile, compile.result, layout, insertAtCursor, loadFiles, loadProject, doCompile, toast, files]);
 
   const commands: Command[] = useMemo(() => {
     const cmds: Command[] = [
@@ -1057,7 +1058,7 @@ export default function Editor() {
             </button>
             <button className={`sidebar__tab ${tab === 'chat' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('chat')} role="tab" data-testid="tab-chat">Assistant</button>
             {pluginPanels.map((p) => (
-              <button key={p.id} className={`sidebar__tab ${tab === p.id ? 'sidebar__tab--active' : ''}`} onClick={() => setTab(p.id)} role="tab" data-testid={`tab-${p.id}`}>
+              <button key={p.id} className={`sidebar__tab ${tab === p.id ? 'sidebar__tab--active' : ''}`} onClick={() => { setTab(p.id); p.onShow?.(); }} role="tab" data-testid={`tab-${p.id}`}>
                 {p.title}
               </button>
             ))}

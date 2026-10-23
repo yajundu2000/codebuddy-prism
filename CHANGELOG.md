@@ -28,6 +28,14 @@ All notable changes to Aldine are documented here. The format follows
   API override.
 
 ### Added
+- The Cite tab opens the project's bibliography (.bib) in the editor, with
+  BibTeX syntax highlighting, and gains a paste box for GB/T 7714-2025
+  references (the Chinese national standard; CNKI exports it): the citation
+  converts to BibTeX — CNKI-style pinyin cite key (source initials + year +
+  issue + first page, via `pinyin-pro`) — and is appended to the .bib the
+  document actually loads (`\addbibresource`, never the Zotero-managed
+  file; `POST /api/projects/:id/references/add-gbt`, duplicates by DOI are
+  skipped). The DOI/arXiv add route resolves its target .bib the same way.
 - The import dialog's filter field takes a pasted repository URL or
   `owner/repo` path and offers a direct Import (Enter), instead of silently
   filtering the list to nothing.

@@ -2,6 +2,7 @@ import * as store from './store.js';
 import { ensureWorktree, checkpointPathsHeld, withRepoLock } from './gitops.js';
 import { flushBranchDocs, refreshBranchDocsFromDisk, scheduleCommit, commitAgentWrite } from './collab.js';
 import { bibKeys } from './bib.js';
+import { pinyin } from 'pinyin-pro';
 
 /**
  * Resolve a DOI, doi.org URL, or arXiv id to a BibTeX entry using free public
@@ -358,10 +359,17 @@ export interface AddedReference { key: string; bibFile: string; duplicate: boole
 export async function addReference(projectId: string, branch: string, query: string, bibFile: string, author?: string, beforeWrite?: () => void): Promise<AddedReference | null> {
   const entry = await fetchBibEntry(query.trim());
   if (!entry) return null;
+  return appendReference(projectId, branch, bibFile, entry, author, beforeWrite);
+}
+
+/**
+ * The one collab-safe .bib append (read → dedup → write → push the new disk
+ * content into open Yjs docs → commit). Synchronous body on purpose: with an
+ * author it runs inside the repo lock, and an await between the write and
+ * the commit's snapshot would let a keystroke into the attributed commit.
+ */
+async function appendReference(projectId: string, branch: string, bibFile: string, entry: string, author?: string, beforeWrite?: () => void): Promise<AddedReference | null> {
   await ensureWorktree(projectId, branch);
-  // Synchronous on purpose: with an author it runs inside the repo lock, and
-  // an await between the write and the commit's snapshot would let a
-  // keystroke into the attributed commit.
   const append = (): AddedReference & { before: Buffer | null; after: string } => {
     let before: Buffer | null = null;
     try { before = store.readFile(projectId, branch, bibFile); } catch { /* new file */ }
@@ -389,4 +397,186 @@ export async function addReference(projectId: string, branch: string, query: str
     if (!duplicate) await commitAgentWrite(projectId, branch, [{ path: bibFile, before, after }], `Add reference ${key || bibFile}`);
     return { key, bibFile, duplicate, created };
   });
+}
+
+// ---------- GB/T 7714-2025 (the Chinese national standard; CNKI exports it) ----------
+
+/** Type markers per GB/T 7714-2025 table 8, fullwidth brackets tolerated. */
+const GBT_MARKER_RE = /[\[［]\s*([A-Z]{1,2}(?:\/OL)?)\s*[\]］]/;
+const GBT_STRIP_PREFIX_RE = /^\s*[\[［]\d+[\]］]\s*/;
+
+/** CNKI-style cite key: initials of the source (pinyin for CJK, word initials
+ *  for Latin, ≤4, upper) + year + issue (2) + first page (3). CNKI's own tail
+ *  digit is a database sequence nobody outside CNKI can derive; the first
+ *  page is the closest stable stand-in, and keys are opaque to the compiler. */
+function gbtKey(source: string, title: string, year: string, issue: string, firstPage: string): string {
+  const src = (source || title).trim();
+  const initials = /\p{Script=Han}/u.test(src)
+    ? pinyin(src, { pattern: 'first', type: 'array', nonZh: 'consecutive' }).join('')
+    : src.split(/\s+/).map((w) => w.charAt(0)).join('');
+  return (initials.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'REF')
+    + (year || '0000') + issue.padStart(2, '0') + firstPage.padStart(3, '0');
+}
+
+/**
+ * Parse one GB/T 7714-2025 reference string into a BibTeX entry, anchored on
+ * the `[J]`-style type marker — never on dots, which appear inside titles.
+ * Null when no marker is found: the caller turns that into a 422 the user
+ * can act on. Values keep their original bytes (CJK, 《》, ——) through
+ * bibField like every other entry source.
+ */
+export function parseGbt7714(citation: string): { type: string; key: string; fields: BibFieldValue[] } | null {
+  const s = GBT_STRIP_PREFIX_RE.test(citation) ? citation.replace(GBT_STRIP_PREFIX_RE, '') : citation.trim();
+  const marker = GBT_MARKER_RE.exec(s);
+  if (!marker) return null;
+  const kind = marker[1];
+  const head = s.slice(0, marker.index).trim();
+  let tail = s.slice(marker.index + marker[0].length).trim().replace(/^[.．。,，;；、\s]+/, '');
+
+  // Trailing identifier tokens come off first: DOI:, an URL, 引文日期, ISSN/ISBN.
+  const ids: Record<string, string> = {};
+  const take = (re: RegExp, into: string): void => {
+    const m = re.exec(tail);
+    if (m) { ids[into] = m[1].trim().replace(/[.．。，,]+$/, ''); tail = (tail.slice(0, m.index) + tail.slice(m.index + m[0].length)).trim(); }
+  };
+  take(/DOI[:：]\s*(\S+)/i, 'doi');
+  // URLs never contain Han; excluding it stops the value at a trailing 引文日期 token
+  take(/(https?:\/\/[^\s，。；;\u4e00-\u9fff]+)/i, 'url');
+  take(/引文日期[:：]?\s*([\d-]+)/, 'urldate');
+  take(/ISSN[:：]?\s*([\dXx-]+)/, 'issn');
+  take(/ISBN[:：]?\s*([\d-]+)/, 'isbn');
+
+  // Head: authors up to the first sentence dot, then the title. A 《…》 title
+  // may contain dots, so when it starts before that dot the split moves past
+  // the closing 》.
+  const firstDot = head.search(/[.．。]/);
+  const bookish = head.indexOf('《');
+  const splitAt = firstDot === -1 ? head.length
+    : bookish !== -1 && bookish < firstDot ? head.indexOf('》', bookish) + 1 || head.length
+    : firstDot;
+  const authorPart = head.slice(0, splitAt).replace(/[.．。,，]\s*$/, '').trim();
+  const titlePart = head.slice(splitAt).replace(/^[.．。\s]+/, '').trim();
+  if (!titlePart) return null;
+  const authors = authorPart.split(/[,，;；]/).map((a) => a.trim()).filter(Boolean)
+    .map((a) => (/^(等|et\s*al\.?)$/i.test(a) ? 'others' : a))
+    .join(' and ');
+
+  // Tail per family: journal `source,year,vol(issue):pages` (issue optional);
+  // book/thesis `place:publisher,year:pages`.
+  let sourceName = '';
+  let year = '';
+  let volume = '';
+  let issue = '';
+  let pages = '';
+  let place = '';
+  let publisher = '';
+  const jm = tail.match(/^(.*?)[,，]\s*(\d{4})\s*[,，]?\s*(\d+)?\s*[（(]\s*([\d+-]+)\s*[)）]\s*[：:]\s*([\d+\-–—~～,，\s]+)/);
+  const jmNoIssue = tail.match(/^(.*?)[,，]\s*(\d{4})\s*[,，]?\s*(\d+)?\s*(?:[（(]\s*[\d+-]+\s*[)）]\s*)?[：:]\s*([\d+\-–—~～,，\s]+)/);
+  const bm = tail.match(/^(?:([^:：]{2,20}?)[:：]\s*)?(.+?)[,，]\s*(\d{4})(?:\s*[：:]\s*([\d+\-–—]+))?\s*[.．]?\s*$/);
+  if (bm && /^[MCS]/.test(kind)) {
+    place = (bm[1] ?? '').trim();
+    publisher = (bm[2] ?? '').trim();
+    year = bm[3] ?? '';
+    pages = (bm[4] ?? '').replace(/[\s,，]/g, '');
+  } else if (jm) {
+    sourceName = jm[1].trim(); year = jm[2]; volume = jm[3] ?? ''; issue = jm[4] ?? ''; pages = jm[5].replace(/[\s,，]/g, '');
+  } else if (jmNoIssue) {
+    sourceName = jmNoIssue[1].trim(); year = jmNoIssue[2]; volume = jmNoIssue[3] ?? ''; pages = jmNoIssue[4].replace(/[\s,，]/g, '');
+  } else {
+    const sm = tail.match(/^(.+?)[,，;；.。]/);
+    sourceName = (sm?.[1] ?? tail).trim();
+    year = tail.match(/(\d{4})/)?.[1] ?? '';
+  }
+  if (!sourceName && !publisher) return null;
+  if (/^D/.test(kind)) sourceName = sourceName.replace(/^[^:：]{1,10}[:：]\s*/, ''); // `place:school,year`
+
+  const firstPage = (pages.match(/\d+/) ?? [''])[0];
+  const F = (name: string, value: string): BibFieldValue => ({ name, value: bibField(value), bare: false });
+  const key = gbtKey(sourceName || publisher, titlePart, year, issue, firstPage);
+  const fields: BibFieldValue[] = [
+    F('title', titlePart),
+    ...(authors ? [F('author', authors)] : []),
+    ...(year ? [{ name: 'year', value: year, bare: false }] : []),
+  ];
+  const extra = (pairs: Array<[string, string]>): void => { for (const [n, v] of pairs) if (v) fields.push(F(n, v)); };
+  if (/^[JN]/.test(kind)) {
+    extra([['journaltitle', sourceName], ['volume', volume], ['number', issue], ['pages', pages]]);
+  } else if (/^M/.test(kind)) {
+    extra([['publisher', publisher], ['address', place], ['pages', pages]]);
+  } else if (/^C/.test(kind)) {
+    extra([['booktitle', sourceName || publisher], ['pages', pages]]);
+  } else if (/^D/.test(kind)) {
+    extra([['school', sourceName]]);
+  } else if (/^S/.test(kind) || /^P/.test(kind)) {
+    extra([['number', (tail.match(/[\d.]+(?:[-—][\d.]+)?\s*$/)?.[1] ?? '').trim()], ['organization', sourceName]]);
+  } else {
+    extra([['howpublished', sourceName]]);
+  }
+  extra([['doi', ids.doi ?? ''], ['issn', ids.issn ?? ''], ['isbn', ids.isbn ?? ''], ['url', ids.url ?? ''], ['urldate', ids.urldate ?? '']]);
+  const type = /^[JN]/.test(kind) ? 'article'
+    : /^M/.test(kind) ? 'book'
+    : /^C/.test(kind) ? 'inproceedings'
+    : /^D/.test(kind) ? (/硕士/.test(sourceName) ? 'mastersthesis' : 'phdthesis')
+    : 'misc';
+  return { type, key, fields };
+}
+
+/**
+ * Where an appended entry belongs: the first .bib the root file actually
+ * loads (\addbibresource / \bibliography) that exists on disk and is not
+ * the Zotero-managed file, else the first other existing .bib, else the
+ * classic root-sibling references.bib (created by the write). The old
+ * `references.bib` default landed entries in a file the document never reads
+ * whenever a project already had its own .bib.
+ */
+export async function resolveAppendBib(projectId: string, branch: string, meta: store.ProjectMeta): Promise<string> {
+  flushBranchDocs(projectId, branch);
+  const zotero = meta.zotero?.bibFile;
+  const exists = (p: string): boolean => { try { store.readFile(projectId, branch, p); return true; } catch { return false; } };
+  let root = '';
+  try { root = store.readFile(projectId, branch, meta.rootFile).toString('utf8'); } catch { /* no root yet */ }
+  const referenced: string[] = [];
+  for (const m of root.matchAll(/\\(?:addbibresource|bibliography)\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+    for (const raw of m[1].split(',')) {
+      const p = raw.trim().replace(/^\.\//, '');
+      if (p) referenced.push(/\.bib$/i.test(p) ? p : `${p}.bib`);
+    }
+  }
+  const candidates = referenced.filter((p) => p !== zotero && exists(p));
+  if (candidates.length) return candidates[0];
+  const existing = store.listFiles(projectId, branch)
+    .filter((f) => f.type === 'file' && f.path.endsWith('.bib') && f.path !== zotero)
+    .map((f) => f.path).sort();
+  return existing[0] ?? rootSiblingBib(meta.rootFile);
+}
+
+function rootSiblingBib(rootFile: string): string {
+  const slash = rootFile.lastIndexOf('/');
+  return slash === -1 ? 'references.bib' : `${rootFile.slice(0, slash + 1)}references.bib`;
+}
+
+/** The string carried no GB/T 7714 type marker — a 422 the user can fix, unlike a write failure. */
+export class GbtParseError extends Error {}
+
+export async function addGbtReference(projectId: string, branch: string, citation: string, bibFile?: string): Promise<AddedReference> {
+  const parsed = parseGbt7714(citation);
+  if (!parsed) throw new GbtParseError('Could not parse that as a GB/T 7714 reference — expected 作者.题名[类型].来源,年,(期):页码.DOI:…');
+  const meta = await store.readMeta(projectId);
+  const target = bibFile || await resolveAppendBib(projectId, branch, meta);
+  let entry = formatEntry(parsed.type, parsed.key, parsed.fields);
+  // A key collision with a different paper gets a suffix; the same DOI is a
+  // duplicate and never reaches the write.
+  let before: Buffer | null = null;
+  try { before = store.readFile(projectId, branch, target); } catch { /* new file */ }
+  const existingKeys = bibKeys(before?.toString('utf8') ?? '');
+  if (existingKeys.has(parsed.key)) {
+    const same = entryWithSameIdentifier(before?.toString('utf8') ?? '', entry);
+    if (same) return { key: same, bibFile: target, duplicate: true, created: false };
+    for (const suffix of 'abcdefghij') {
+      if (!existingKeys.has(parsed.key + suffix)) { entry = formatEntry(parsed.type, parsed.key + suffix, parsed.fields); break; }
+    }
+  }
+  const added = await appendReference(projectId, branch, target, entry);
+  if (!added) throw new Error('Could not append the reference'); // unreachable: appendReference only nulls on a null entry
+  return added;
 }
