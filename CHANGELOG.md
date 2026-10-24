@@ -7,6 +7,9 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The Cite panel is GB/T-paste only: the OpenAlex search box and the
+  DOI/arXiv identifier input are gone from the UI (the routes stay for the
+  AI assistant's tools, covered by an API-level e2e test).
 - Deleting a project from its card asks for confirmation first (it moves to
   the trash, kept 30 days; the Undo toast stays).
 - Home redesign after the test1.fig mockup: prism monogram + Manrope wordmark
