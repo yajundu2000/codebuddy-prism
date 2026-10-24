@@ -559,21 +559,32 @@ function rootSiblingBib(rootFile: string): string {
 export class GbtParseError extends Error {}
 
 export async function addGbtReference(projectId: string, branch: string, citation: string, bibFile?: string): Promise<AddedReference> {
-  const parsed = parseGbt7714(citation);
-  if (!parsed) throw new GbtParseError('Could not parse that as a GB/T 7714 reference — expected 作者.题名[类型].来源,年,(期):页码.DOI:…');
+  // A leading `@` is raw BibTeX (the user already has the entry); anything
+  // else is parsed as a GB/T 7714-2025 citation string.
+  const raw = citation.trim();
+  let entry: string;
+  if (raw.startsWith('@')) {
+    entry = sanitizeBibtex(raw);
+    if (!parseEntry(entry)) throw new GbtParseError('Could not parse that as a BibTeX entry — expected @type{key, field = {value}, …}');
+  } else {
+    const parsed = parseGbt7714(raw);
+    if (!parsed) throw new GbtParseError('Could not parse that as a GB/T 7714 reference — expected 作者.题名[类型].来源,年,(期):页码.DOI:…');
+    entry = formatEntry(parsed.type, parsed.key, parsed.fields);
+  }
   const meta = await store.readMeta(projectId);
   const target = bibFile || await resolveAppendBib(projectId, branch, meta);
-  let entry = formatEntry(parsed.type, parsed.key, parsed.fields);
   // A key collision with a different paper gets a suffix; the same DOI is a
   // duplicate and never reaches the write.
   let before: Buffer | null = null;
   try { before = store.readFile(projectId, branch, target); } catch { /* new file */ }
   const existingKeys = bibKeys(before?.toString('utf8') ?? '');
-  if (existingKeys.has(parsed.key)) {
+  const key = [...bibKeys(entry)][0] ?? '';
+  if (key && existingKeys.has(key)) {
     const same = entryWithSameIdentifier(before?.toString('utf8') ?? '', entry);
     if (same) return { key: same, bibFile: target, duplicate: true, created: false };
+    const re = new RegExp(`@([a-zA-Z]+)\\s*\\{\\s*${key}\\s*,`);
     for (const suffix of 'abcdefghij') {
-      if (!existingKeys.has(parsed.key + suffix)) { entry = formatEntry(parsed.type, parsed.key + suffix, parsed.fields); break; }
+      if (!existingKeys.has(key + suffix)) { entry = entry.replace(re, `@$1{${key}${suffix},`); break; }
     }
   }
   const added = await appendReference(projectId, branch, target, entry);

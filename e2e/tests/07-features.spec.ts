@@ -73,6 +73,17 @@ test.describe('v0.2 features', () => {
       await page.getByTestId('gbt-citation-input').fill('随便一段没有标记的文字');
       await page.getByTestId('gbt-add').click();
       await expect(page.locator('.toast').filter({ hasText: 'Could not parse' })).toBeVisible();
+
+      // raw BibTeX pastes work too (a leading @), sanitized and deduped by DOI
+      await page.getByTestId('gbt-citation-input').fill('@article{myKey2024,\n  title = {Pasted directly},\n  author = {Zhou Wu},\n  year = {2024},\n  doi = {10.9999/paste},\n}');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.locator('.cm-content')).toContainText('Pasted directly', { timeout: 15_000 });
+      const pasted = await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text();
+      expect(pasted).toContain('10.9999/paste');
+      expect(pasted).not.toContain('&amp;'); // sanitized like every other entry source
+      await page.getByTestId('gbt-citation-input').fill('@article{myKey2024,\n  title = {Pasted directly},\n  author = {Zhou Wu},\n  year = {2024},\n  doi = {10.9999/paste},\n}');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.locator('.toast').filter({ hasText: 'Already in bibliography' }).first()).toBeVisible();
     } finally {
       await cleanup(request, id);
     }

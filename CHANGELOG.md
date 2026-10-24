@@ -38,7 +38,8 @@ All notable changes to Aldine are documented here. The format follows
   issue + first page, via `pinyin-pro`) — and is appended to the .bib the
   document actually loads (`\addbibresource`, never the Zotero-managed
   file; `POST /api/projects/:id/references/add-gbt`, duplicates by DOI are
-  skipped). The DOI/arXiv add route resolves its target .bib the same way.
+  skipped). A leading `@` pastes raw BibTeX directly (sanitized through the
+  same pipeline). The DOI/arXiv add route resolves its target .bib the same way.
 - The import dialog's filter field takes a pasted repository URL or
   `owner/repo` path and offers a direct Import (Enter), instead of silently
   filtering the list to nothing.

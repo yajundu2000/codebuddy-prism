@@ -57,10 +57,10 @@ export default {
           const wrap = h('div', { class: 'panel-list', dataset: { testid: 'references-panel' }, style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px 6px' } });
 
           wrap.append(
-            h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference'),
+            h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference or a BibTeX entry'),
             h('textarea', {
               class: 'input',
-              placeholder: '[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究[J].新传奇,2026,(37):47-49.DOI:…',
+              placeholder: '[1]董丁槊,刘荣.题名[J].刊名,2026,(37):47-49.DOI:…\n或 @article{key, title = {…}, …}',
               style: { width: '100%', height: '88px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 },
               dataset: { testid: 'gbt-citation-input' },
               oninput: (e) => { citation = e.target.value; },
