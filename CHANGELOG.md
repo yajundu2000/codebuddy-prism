@@ -7,6 +7,8 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The Fix panel (AI diagnosis of compile errors) is disabled in the UI
+  (`plugins/aifix` manifest `enabled: false`); the underlying routes stay.
 - The Cite panel is GB/T-paste only: the OpenAlex search box and the
   DOI/arXiv identifier input are gone from the UI (the routes stay for the
   AI assistant's tools, covered by an API-level e2e test).
