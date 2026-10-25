@@ -74,9 +74,11 @@ test.describe('source offer', () => {
     const about = page.getByTestId('about-modal');
     await expect(about).toBeVisible();
     await expect(about).toContainText('Affero General Public License');
+    // the source offer is same-site (AGPL §13 via the deployed bundle), never an external repo
     await expect(about.getByTestId('about-source')).toHaveAttribute(
       'href',
-      'https://github.com/yajundu2000/codebuddy-prism',
+      '/source-code.tar.gz',
     );
+    await expect(about).not.toContainText('github.com');
   });
 });

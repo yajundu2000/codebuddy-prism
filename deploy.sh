@@ -18,6 +18,14 @@ NODE_IMAGE="${NODE_IMAGE:-docker.m.daocloud.io/library/node:22-alpine}"
 
 case "${1:-}" in
   build)
+    # AGPL §13 source offer: the exact tree this image is built from. Kept in
+    # source form (no node_modules/dist); a few MB.
+    tar czf deploy/source-code.tar.gz \
+      --exclude='.git' --exclude='node_modules' --exclude='**/node_modules' \
+      --exclude='**/dist' --exclude='.data*' --exclude='.secrets*' \
+      --exclude='.cache' --exclude='e2e' --exclude='test-results' \
+      --exclude='*.log' --exclude='deploy/.env' --exclude='deploy/source-code.tar.gz' \
+      --transform 's,^,codebuddy-prism/,' .
     docker build -f apps/server/Dockerfile \
       --build-arg NPM_REGISTRY="$NPM_REGISTRY" \
       --build-arg NODE_IMAGE="$NODE_IMAGE" \

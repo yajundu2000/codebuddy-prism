@@ -37,6 +37,10 @@ COPY --from=serverbuild /build/apps/server/dist apps/server/dist
 COPY --from=serverbuild /build/apps/server/assets apps/server/assets
 COPY plugins plugins
 COPY templates templates
+# AGPL §13: the complete source of the running version, offered from this
+# instance (GET /source-code.tar.gz). Packed by deploy.sh from the exact tree
+# this image was built from.
+COPY deploy/source-code.tar.gz source-code.tar.gz
 COPY --from=webbuild /build/apps/web/dist apps/web/dist
 
 ENV PORT=3000 \

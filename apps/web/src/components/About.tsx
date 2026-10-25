@@ -3,15 +3,13 @@ import Modal from './Modal';
 declare const __ALDINE_VERSION__: string;
 declare const __ALDINE_REV__: string;
 
-const SOURCE_URL = 'https://github.com/yajundu2000/codebuddy-prism';
-const UPSTREAM_URL = 'https://github.com/trahloff/Aldine';
-
 /**
  * AGPL section 13: anyone interacting with this instance over a network must be
- * offered the source of the version they are interacting with. That is what the
- * build stamp below is for — an operator running modified code has to point
- * SOURCE_URL at their own fork.
+ * offered the source of the version they are interacting with. The bundle is
+ * packed into the image by deploy.sh and served from this instance — the
+ * deployment never points at an external repository.
  */
+const SOURCE_URL = '/source-code.tar.gz';
 export default function About({ onClose }: { onClose: () => void }) {
   const rev = __ALDINE_REV__;
   return (
@@ -22,9 +20,8 @@ export default function About({ onClose }: { onClose: () => void }) {
         {rev ? <> · build <code>{rev}</code></> : null}
       </p>
       <p className="modal__sub">
-        Based on{' '}
-        <a href={UPSTREAM_URL} target="_blank" rel="noreferrer">Aldine</a>. Independent
-        open-source project, not affiliated with Tencent CodeBuddy.
+        Based on Aldine. Independent open-source project, not affiliated with
+        Tencent CodeBuddy.
       </p>
       <p className="modal__sub">
         Licensed under the{' '}

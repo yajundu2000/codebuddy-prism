@@ -144,6 +144,18 @@ async function requireOwner(req: any, reply: any, action: string): Promise<store
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/health', async () => ({ ok: true, name: 'aldine' }));
 
+  // AGPL §13: the complete source of the version this instance runs, offered
+  // from the instance itself (the About dialog links here). The tarball is
+  // packed by deploy.sh into the image; a dev checkout has none → 404.
+  app.get('/source-code.tar.gz', async (_req, reply) => {
+    const file = path.join(process.cwd(), 'source-code.tar.gz');
+    try {
+      const buf = await fs.promises.readFile(file);
+      reply.header('content-type', 'application/gzip').header('content-disposition', 'attachment; filename="source-code.tar.gz"');
+      return reply.send(buf);
+    } catch { return reply.code(404).send({ error: 'No source bundle in this build' }); }
+  });
+
   // Showcase projects (ALDINE_PROTECTED_PROJECTS): every visitor may read and
   // typeset them, nobody may change them — a public demo's sample paper must
   // survive launch-day traffic. The collab websocket enforces the same rule

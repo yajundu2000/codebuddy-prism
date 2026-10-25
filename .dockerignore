@@ -12,4 +12,6 @@ e2e
 site
 docs
 deploy
+# the AGPL §13 source offer ships inside the image (deploy.sh packs it)
+!deploy/source-code.tar.gz
 *.log

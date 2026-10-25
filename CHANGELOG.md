@@ -7,6 +7,10 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The About dialog's source offer points at a same-site bundle
+  (`GET /source-code.tar.gz`, packed into the image by deploy.sh) instead of
+  the GitHub repository: an instance now satisfies AGPL §13 from itself, and
+  the UI carries no external repository links.
 - The Fix panel (AI diagnosis of compile errors) is disabled in the UI
   (`plugins/aifix` manifest `enabled: false`); the underlying routes stay.
 - The Cite panel is GB/T-paste only: the OpenAlex search box and the
