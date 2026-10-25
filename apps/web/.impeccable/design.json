@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T11:20:00+08:00",
+  "title": "Design System: codebuddy-prism web",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Prism Violet (text grade)", "canonical": "#8c7cf6", "tonalRamp": ["#3d3373", "#4c3dcc", "#5b4be0", "#6c5ce7", "#8c7cf6", "#a49dfa", "#c3b8fc", "#e4defe"] },
+      "app-bg": { "role": "neutral", "displayName": "Night Navy", "canonical": "#12141c", "tonalRamp": ["#0c0e14", "#12141c", "#16181f", "#171922", "#1a1c24", "#20222c", "#2a2d3a", "#3a3e4e"] },
+      "text": { "role": "neutral", "displayName": "Ink White", "canonical": "#f4f5f9" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "rgba(255,255,255,0.10)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Manrope Variable", "purpose": "Landing hero titles; app wordmark. CJK falls to PingFang/YaHei per glyph." },
+      "label": { "displayName": "System mono", "purpose": "LaTeX code, (eyebrow) signatures, venue chips. Identity, not costume." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgba(0,0,0,0.35)", "purpose": "Resting app cards." },
+      { "name": "pop", "value": "0 0 0 0.5px rgba(255,255,255,0.14), 0 10px 34px rgba(0,0,0,0.6)", "purpose": "Menus, palette, dialogs, login card on the landing." },
+      { "name": "browser-frame", "value": "0 32px 64px -24px rgba(0,0,0,0.55)", "purpose": "Landing product shots only — states 'this is a screen'; hover deepens and lifts 4px." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.25, 0.1, 0.25, 1)", "purpose": "On-screen state (hover, toggles)." },
+      { "name": "ease-out", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Arrivals; the landing's single staggered hero entrance (fade + 14px rise + blur clear)." }
+    ],
+    "breakpoints": [
+      { "name": "feature-stack", "value": "1080px" },
+      { "name": "band-2col", "value": "780px" },
+      { "name": "cta-fullwidth", "value": "560px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Landing Pill (primary CTA)",
+      "kind": "button",
+      "refersTo": "landing-pill",
+      "description": "The landing's only filled-button voice: nav, hero, plan cards, open-source strip.",
+      "html": "<button class=\"ds-pill\">免费开始写作 →</button>",
+      "css": ".ds-pill { border: none; border-radius: 999px; padding: 13px 28px; font: 600 15px 'Inter Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif; color: #fff; background: #6c5ce7; cursor: pointer; transition: background .15s; } .ds-pill:hover { background: #5a49e0; } .ds-pill:focus-visible { outline: 2px solid #8c7cf6; outline-offset: 1px; }"
+    },
+    {
+      "name": "Landing Pill (ghost)",
+      "kind": "button",
+      "refersTo": "landing-pill-ghost",
+      "description": "Secondary landing action: hairline border, transparent ground.",
+      "html": "<button class=\"ds-pill-ghost\">看看能做什么</button>",
+      "css": ".ds-pill-ghost { border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 13px 28px; font: 600 15px 'Inter Variable', 'PingFang SC', sans-serif; color: #f4f5f9; background: transparent; cursor: pointer; transition: background .15s; } .ds-pill-ghost:hover { background: rgba(255,255,255,0.06); }"
+    },
+    {
+      "name": "App primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "In-app action button: 6px radius, fill-grade violet.",
+      "html": "<button class=\"ds-btn\">Sign in</button>",
+      "css": ".ds-btn { border: 1px solid rgba(255,255,255,0.10); border-radius: 6px; height: 34px; padding: 0 14px; font: 500 13px 'Inter Variable', sans-serif; color: #fff; background: #6c5ce7; cursor: pointer; } .ds-btn:hover { background: #5a49e0; }"
+    },
+    {
+      "name": "Landing eyebrow (surface signature)",
+      "kind": "chip",
+      "refersTo": "landing-card",
+      "description": "Brief-pinned landing signature; mono lowercase in parentheses. Never propagates to app surfaces.",
+      "html": "<p class=\"ds-eyebrow\">(write your thesis)</p>",
+      "css": ".ds-eyebrow { margin: 0 0 14px; font: 500 12px ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: .08em; color: #8c7cf6; }"
+    },
+    {
+      "name": "Browser-framed product shot",
+      "kind": "custom",
+      "refersTo": "landing-card",
+      "description": "The landing's only imagery: real screenshots, three-dot chrome, deep offset shadow.",
+      "html": "<figure class=\"ds-shot\"><span class=\"ds-shot-bar\"><i></i><i></i><i></i></span><img alt=\"editor\" /></figure>",
+      "css": ".ds-shot { margin: 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: #1a1c24; box-shadow: 0 32px 64px -24px rgba(0,0,0,0.55); overflow: hidden; } .ds-shot-bar { display: flex; gap: 7px; padding: 11px 14px; background: #171922; border-bottom: 1px solid rgba(255,255,255,0.10); } .ds-shot-bar i { width: 10px; height: 10px; border-radius: 50%; } .ds-shot-bar i:nth-child(1) { background: #e8613c; } .ds-shot-bar i:nth-child(2) { background: #f0b83e; } .ds-shot-bar i:nth-child(3) { background: #59b75f; } .ds-shot img { display: block; width: 100%; }"
+    },
+    {
+      "name": "Plan card",
+      "kind": "card",
+      "refersTo": "landing-card",
+      "description": "Pricing tier card; featured variant carries a 1.5px violet border on the raised ground.",
+      "html": "<div class=\"ds-plan\"><h3>课题组版</h3><ul><li>组内共享项目与模板</li></ul></div>",
+      "css": ".ds-plan { display: flex; flex-direction: column; gap: 14px; padding: 28px 26px; border-radius: 12px; background: #1a1c24; border: 1px solid rgba(255,255,255,0.10); font-family: 'Inter Variable', 'PingFang SC', sans-serif; color: #9ca0ab; max-width: 300px; } .ds-plan h3 { margin: 0; color: #f4f5f9; font-size: 17px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Prism in the Dark Room（暗房里的棱镜）",
+    "overview": "深海军蓝的界面世界里只点一盏紫罗兰灯：产品名里的 prism 是唯一强调色，其余一切用面板深浅与发丝线分层。Manrope 承担展示性标题、Inter 承担界面正文（均自托管），等宽字体承担全部 LaTeX 身份。暗色是默认主题；深度靠底色台阶，不靠影。",
+    "keyCharacteristics": [
+      "深底分层 app→inset→toolbar→panel→raised，深度靠底色台阶不靠影",
+      "单强调色：紫罗兰一家（text 级 #8c7cf6 / fill 级 #6c5ce7）",
+      "发丝线是唯一结构线",
+      "圆角阶梯 4/6/8/12px；胶囊 999px 只属于小控件与落地 CTA",
+      "落地面独有语法：等宽眉标、浏览器框截图、全宽深带"
+    ],
+    "rules": [
+      { "name": "The One Violet Rule", "body": "紫罗兰是唯一强调色；出现即意味着可点或可注目。蓝绿橙不进入这个世界（语义色除外）。", "section": "colors" },
+      { "name": "The Wash Steps Up Rule", "body": "紫色文字落在 violet wash 上必须升亮档 #a49dfa——wash 抬高地面后原对比跌破 4.5:1。", "section": "colors" },
+      { "name": "The Mono Is Identity Rule", "body": "等宽字体只写代码、venue 名与眉标——它是 LaTeX 的母语，不做通用科技感装扮。", "section": "typography" },
+      { "name": "The Shadow States Purpose Rule", "body": "影只在陈述「这是一块悬着的屏幕/浮层」；静态卡片不加影。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 每个落地面节配一个等宽小写眉标；应用面不加。",
+      "Do 落地面中段行动点用紫字链接；实心胶囊只放 nav/hero/定价/收尾四处。",
+      "Do 图像一律真实截图+浏览器框；营销数字只用已核实事实。",
+      "Do 紫文字落 violet wash 上时升亮档（#a49dfa）。"
+    ],
+    "donts": [
+      "Don't 引入第二强调色或渐变；蓝绿橙不出现（语义色除外）。",
+      "Don't 把眉标/胶囊/浏览器框带进应用界面——那是落地面专属语法。",
+      "Don't 用插画、图标库、emoji、点阵替代真实截图。",
+      "Don't 静态卡片加影。",
+      "Don't 在对外表面出现 github.com 链接、价格数字、编造的备案号（PRODUCT.md 红线）。"
+    ]
+  }
+}

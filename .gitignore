@@ -54,3 +54,5 @@ apps/server/assets/pdf-viewer.html
 deploy/.env
 .data-*/
 .secrets-*/
+deploy/source-code.tar.gz
+.impeccable/review/

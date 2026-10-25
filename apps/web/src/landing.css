@@ -1,0 +1,363 @@
+/* Landing (the signed-out marketing surface) — same dark navy world as the
+ * app, with its own Persuade grammar: violet mono eyebrows, pill CTAs,
+ * browser-framed product shots. Everything is prefixed landing__ and rides
+ * the shared theme.css tokens; no app style is touched. */
+
+.landing {
+  --landing-wrap: 1160px;
+  --landing-pad: 32px;
+  /* CJK glyphs fall through Manrope/Inter per-glyph; name the stack so
+     headings pick the same faces on every platform. */
+  --landing-display: var(--font-display), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --landing-body: var(--font-ui), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  min-height: 100%;
+  background: var(--bg-app);
+  font-family: var(--landing-body);
+  caret-color: var(--accent);
+}
+
+.landing__nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--material-pop);
+  backdrop-filter: var(--material-blur);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.landing__nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+  padding: 14px var(--landing-pad);
+}
+
+.landing__nav-links { display: flex; gap: 22px; margin-left: auto; }
+.landing__nav-links a {
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: var(--text-m);
+  transition: color 0.15s var(--ease);
+}
+.landing__nav-links a:hover { color: var(--text); }
+
+/* Pill CTAs — the landing's only filled-button voice. */
+.landing__pill {
+  border: none;
+  border-radius: 999px;
+  padding: 9px 20px;
+  font: 600 var(--text-m) var(--landing-body);
+  color: var(--on-accent);
+  background: var(--accent-fill);
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.landing__pill:hover { background: var(--accent-fill-hover); }
+.landing__pill--lg { padding: 13px 28px; font-size: var(--text-l); }
+.landing__pill--ghost {
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+}
+.landing__pill--ghost:hover { background: var(--bg-hover); }
+
+/* --- hero: the one authored moment — a single staggered arrival --- */
+
+.landing__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 380px);
+  gap: 56px;
+  align-items: center;
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+  padding: 72px var(--landing-pad) 88px;
+}
+
+.landing__hero-copy > * {
+  opacity: 0;
+  animation: landing-arrive 0.7s var(--ease-out) forwards;
+}
+.landing__hero-copy > *:nth-child(2) { animation-delay: 0.08s; }
+.landing__hero-copy > *:nth-child(3) { animation-delay: 0.16s; }
+.landing__hero-copy > *:nth-child(4) { animation-delay: 0.24s; }
+.landing__hero-copy > *:nth-child(5) { animation-delay: 0.32s; }
+.landing__hero-login { opacity: 0; animation: landing-arrive 0.7s var(--ease-out) 0.2s forwards; }
+
+@keyframes landing-arrive {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing__hero-copy > *, .landing__hero-login { animation: none; opacity: 1; }
+}
+
+/* The eyebrow is this surface's pinned signature: violet mono lowercase in
+   parentheses, straight after/before its heading. */
+.landing__eyebrow {
+  font: 500 var(--text-s) var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+
+.landing__title {
+  font-family: var(--landing-display);
+  font-size: clamp(2.5rem, 4.6vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+}
+
+.landing__sub {
+  max-width: 34em;
+  margin: 0 0 26px;
+  font-size: var(--text-xl);
+  line-height: 1.75;
+  color: var(--text-2);
+}
+
+.landing__cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+
+.landing__trust { margin: 0; font-size: var(--text-s); color: var(--text-3); letter-spacing: 0.02em; }
+
+/* The sign-in card slots in untouched; neutralize the fullscreen centering
+   .login does when it stands alone. */
+.landing__hero-login .login { min-height: 0; padding: 0; display: block; }
+.landing__hero-login .login__card { width: 100%; box-shadow: var(--shadow-pop); }
+
+/* --- stat band (full-bleed surface, constrained content) --- */
+
+.landing__band {
+  padding: 40px var(--landing-pad);
+  background: var(--bg-inset);
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.landing__band-inner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+}
+
+.landing__stat { display: flex; flex-direction: column; gap: 6px; }
+.landing__stat-n {
+  font-family: var(--landing-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.landing__stat-label { font-size: var(--text-s); color: var(--text-2); line-height: 1.5; }
+
+/* --- sections --- */
+
+.landing__features, .landing__templates, .landing__plans {
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+  padding: 88px var(--landing-pad);
+  scroll-margin-top: 72px;
+}
+.landing__features h2, .landing__templates h2, .landing__plans h2, .landing__oss h2 {
+  font-family: var(--landing-display);
+  font-size: clamp(1.75rem, 2.8vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0 0 12px;
+  text-wrap: balance;
+}
+.landing__section-sub { margin: 0 0 48px; color: var(--text-2); font-size: var(--text-l); max-width: 40em; }
+
+/* --- feature blocks: copy ⇄ browser-framed shot, alternating --- */
+
+.landing__feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 64px;
+  align-items: center;
+  padding: 40px 0;
+}
+.landing__feature + .landing__feature { border-top: 1px solid var(--hairline); }
+.landing__feature--flip .landing__feature-copy { order: 2; }
+
+.landing__feature-copy h3 {
+  font-family: var(--landing-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+.landing__feature-copy > p { margin: 0 0 18px; color: var(--text-2); line-height: 1.75; }
+.landing__feature-copy ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.landing__feature-copy li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--text);
+  line-height: 1.6;
+}
+/* CSS-drawn check — no glyph, no icon font. */
+.landing__feature-copy li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.5em;
+  width: 12px;
+  height: 6px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+
+/* Browser frame: the landing's only imagery is the real product, framed. */
+.landing__shot {
+  margin: 0;
+  border-radius: var(--radius-l);
+  border: 1px solid var(--hairline-strong);
+  background: var(--bg-panel);
+  box-shadow: 0 32px 64px -24px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.landing__shot:hover { transform: translateY(-4px); box-shadow: 0 40px 80px -24px rgba(0, 0, 0, 0.65); }
+.landing__shot-bar {
+  display: flex;
+  gap: 7px;
+  padding: 11px 14px;
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--hairline);
+}
+.landing__shot-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--hairline-strong); }
+.landing__shot-bar i:nth-child(1) { background: #e8613c; }
+.landing__shot-bar i:nth-child(2) { background: #f0b83e; }
+.landing__shot-bar i:nth-child(3) { background: #59b75f; }
+.landing__shot img { display: block; width: 100%; height: auto; }
+
+/* --- templates chips --- */
+
+.landing__chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+.landing__chips li {
+  font: 500 var(--text-s) var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  padding: 7px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  background: var(--bg-panel);
+}
+.landing__chips .landing__chips-more { color: var(--accent); border-style: dashed; background: transparent; }
+
+/* --- plans --- */
+
+.landing__plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.landing__plan {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 26px;
+  border-radius: var(--radius-l);
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+}
+.landing__plan--featured { border: 1.5px solid var(--accent); background: var(--bg-panel-raised); }
+.landing__plan h3 { font-family: var(--landing-display); font-size: var(--text-xl); font-weight: 700; margin: 0; }
+.landing__plan-tag { margin: 0; color: var(--text-2); font-size: var(--text-s); }
+.landing__plan ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px; flex: 1; }
+.landing__plan li { position: relative; padding-left: 26px; line-height: 1.6; color: var(--text-2); }
+.landing__plan li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.5em;
+  width: 12px;
+  height: 6px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+.landing__plan-cta { width: 100%; }
+
+/* --- open-source close --- */
+
+.landing__oss {
+  padding: 72px var(--landing-pad);
+  scroll-margin-top: 72px;
+  background: var(--accent-soft);
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.landing__oss-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+}
+/* the wash lightens the ground, so accent text steps up a grade to keep 4.5:1+ */
+.landing__eyebrow--onoss { color: var(--accent-hover); }
+.landing__oss h2 { margin: 0 0 10px; }
+.landing__oss-sub { margin: 0; color: var(--text-2); line-height: 1.75; max-width: 36em; }
+.landing__oss-actions { display: flex; flex-direction: column; gap: 14px; align-items: stretch; flex-shrink: 0; }
+.landing__oss-src {
+  font: 500 var(--text-s) var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent-hover); /* lighter grade: the wash behind it lifts the ground */
+  text-decoration: none;
+  text-align: center;
+  padding: 10px 0;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--hairline);
+}
+.landing__oss-src:hover { background: var(--bg-hover); }
+
+/* --- footer --- */
+
+.landing__footer {
+  max-width: var(--landing-wrap);
+  margin: 0 auto;
+  padding: 40px var(--landing-pad) 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.landing__footer-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.landing__footer-note { margin: 0; color: var(--text-3); font-size: var(--text-s); }
+.landing__footer-note a { color: var(--accent); text-decoration: none; }
+.landing__footer-note a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* --- responsive --- */
+
+@media (max-width: 1080px) {
+  .landing__hero { grid-template-columns: 1fr; gap: 40px; padding-top: 56px; }
+  .landing__hero-login { max-width: 400px; }
+  .landing__feature { grid-template-columns: 1fr; gap: 36px; }
+  .landing__feature--flip .landing__feature-copy { order: 0; }
+}
+
+@media (max-width: 780px) {
+  .landing__band-inner { grid-template-columns: repeat(2, 1fr); gap: 28px 20px; }
+  .landing__plan-grid { grid-template-columns: 1fr; }
+  .landing__oss-inner { flex-direction: column; align-items: flex-start; }
+  .landing__nav-links { display: none; }
+  .landing__nav .landing__pill { margin-left: auto; }
+}
+
+@media (max-width: 560px) {
+  .landing__cta-row { flex-direction: column; align-items: stretch; }
+  .landing__pill--lg { width: 100%; }
+  .landing__oss-actions { width: 100%; }
+}

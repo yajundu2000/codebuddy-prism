@@ -6,6 +6,14 @@ All notable changes to Aldine are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The signed-out gate is now a landing page: an Overleaf-style pitch (hero
+  with the sign-in card embedded, stat band, four feature blocks with real
+  product screenshots, template/venue chips, three plan tiers without
+  prices, an open-source close with the same-site source offer, and a
+  footer) set inside the app's dark navy world. The login card itself is
+  untouched, so every auth flow and testid behaves exactly as before.
+
 ### Changed
 - The About dialog's source offer points at a same-site bundle
   (`GET /source-code.tar.gz`, packed into the image by deploy.sh) instead of

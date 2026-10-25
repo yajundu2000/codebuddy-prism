@@ -11,7 +11,8 @@
 e2e
 site
 docs
-deploy
-# the AGPL §13 source offer ships inside the image (deploy.sh packs it)
+# children, not the dir itself: a `!` negation inside a fully excluded
+# directory is ignored, and the AGPL source bundle must ship in the image
+deploy/*
 !deploy/source-code.tar.gz
 *.log

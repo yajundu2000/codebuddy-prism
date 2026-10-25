@@ -194,7 +194,7 @@ test.describe('MCP over PAT auth', () => {
     try {
       const created = await call(client, 'create_project', { name: 'MCP Created' });
       expect(created.isError).toBeFalsy();
-      expect(created.body).toMatchObject({ name: 'MCP Created', rootFile: 'main.tex', engine: 'pdf', branch: 'main' });
+      expect(created.body).toMatchObject({ name: 'MCP Created', rootFile: 'main.tex', engine: 'xelatex', branch: 'main' });
       expect(typeof created.body.id).toBe('string');
       expect(created.body.head).toMatch(/^[0-9a-f]{4,}$/);
       expect(created.body.deepLink).toContain(`/p/${created.body.id}`);

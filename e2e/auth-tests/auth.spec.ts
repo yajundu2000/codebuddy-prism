@@ -23,6 +23,20 @@ test.describe('auth', () => {
     await expect(page.getByTestId('auth-submit')).toBeVisible();
   });
 
+  test('the signed-out gate is the landing page: pitch sections wrap the login card', async ({ page }) => {
+    await page.goto('/');
+    for (const t of ['landing', 'landing-nav', 'landing-hero', 'landing-band', 'landing-features', 'landing-templates', 'landing-plans', 'landing-oss', 'landing-footer']) {
+      await expect(page.getByTestId(t)).toBeVisible();
+    }
+    // the card is inside the hero, not a lone centered box
+    await expect(page.getByTestId('landing-hero').getByTestId('auth-email')).toBeVisible();
+    // every feature block ships a real product shot
+    await expect(page.locator('[data-testid="landing-features"] .landing__shot img')).toHaveCount(4);
+    // the source offer stays same-site (no external repo links anywhere)
+    await expect(page.locator('[data-testid="landing"] a[href*="github"]')).toHaveCount(0);
+    await expect(page.getByTestId('landing-oss').getByRole('link')).toHaveAttribute('href', /source-code\.tar\.gz$/);
+  });
+
   test('register, create a project, sign out, sign back in — project persists', async ({ page }) => {
     const email = uniq();
     await register(page, email);
@@ -332,7 +346,9 @@ test.describe('auth depth', () => {
     await page.getByTestId('auth-email').fill(email);
     await page.getByTestId('auth-password').fill('brandnewpass1');
     await page.getByTestId('auth-submit').click();
-    await expect(page.locator('.home__brand')).toBeVisible({ timeout: 15_000 });
+    // signed-in marker, not .home__brand — the landing (signed-out) also
+    // carries the brand lockup in its nav and footer
+    await expect(page.getByTestId('new-project')).toBeVisible({ timeout: 15_000 });
   });
 
   test('SSO endpoints 404 for unconfigured providers, and only configured ones show a button', async ({ page, request }) => {

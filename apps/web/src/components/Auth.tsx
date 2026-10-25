@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type JSX } from 'react';
 import { withBase } from '../basePath';
 import Brand from './Brand';
+import Landing from './Landing';
 import { api, AuthUser, OAuthProviderInfo } from '../api';
 
 interface AuthState {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // in an already-signed-in session (otherwise the ?reset_token= link does nothing).
   const hasResetToken = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset_token');
   const selfGated = typeof window !== 'undefined' && SELF_GATED_PATHS.some((p) => window.location.pathname === withBase(p));
-  if (authEnabled && (!user || hasResetToken) && !selfGated) return <LoginScreen providers={providers} passwordAuth={passwordAuth} onAuthed={(u) => setUser(u)} />;
+  if (authEnabled && (!user || hasResetToken) && !selfGated) return <Landing login={<LoginScreen providers={providers} passwordAuth={passwordAuth} onAuthed={(u) => setUser(u)} />} />;
 
   return <Ctx.Provider value={{ loading, authEnabled, user, admin, providers, passwordAuth, mcpEnabled, publicUrl, setUser, refresh }}>{children}</Ctx.Provider>;
 }
