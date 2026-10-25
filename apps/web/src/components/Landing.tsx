@@ -193,7 +193,7 @@ export default function Landing({ login }: { login: ReactNode }) {
       <footer className="landing__footer" data-testid="landing-footer">
         <div className="landing__footer-row">
           <Brand />
-          <p className="landing__footer-note">TeX写作智能体 · 广州深蓝湾流信息技术有限公司</p>
+          <p className="landing__footer-note">TeX写作智能体 · 文灶网</p>
         </div>
         <p className="landing__footer-note">商务微信 yajun__du · 邮箱 yajundu@126.com · AGPL-3.0 · <a href={withBase('/source-code.tar.gz')} download>源码</a> · © 2026</p>
         {/* 备案沿用主体站 wenzao.site（同一运营主体：深蓝湾流） */}
