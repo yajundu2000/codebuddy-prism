@@ -306,6 +306,8 @@ export const api = {
     req<{ ok: boolean }>(`/api/projects/${id}/file?branch=${encodeURIComponent(branch)}&path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
   renameFile: (id: string, branch: string, from: string, to: string) =>
     req<{ ok: boolean }>(`/api/projects/${id}/file/rename`, { method: 'POST', body: JSON.stringify({ branch, from, to }) }),
+  createFolder: (id: string, branch: string, path: string) =>
+    req<{ ok: boolean }>(`/api/projects/${id}/folder`, { method: 'POST', body: JSON.stringify({ branch, path }) }),
 
   compile: (id: string, branch: string, reason?: 'agent') =>
     req<CompileResult>(`/api/projects/${id}/compile`, { method: 'POST', body: JSON.stringify({ branch, ...(reason ? { reason } : {}) }) }),

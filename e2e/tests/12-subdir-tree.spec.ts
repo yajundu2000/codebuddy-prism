@@ -240,3 +240,28 @@ test.describe('folder context menu', () => {
     } finally { await cleanup(request, id); }
   });
 });
+
+test.describe('create folder', () => {
+  test('+ New folder makes an empty folder visible in the default source view', async ({ page, request }) => {
+    const id = await createProject(request, 'New Folder');
+    try {
+      await openProject(page, id);
+      await page.getByTestId('new-folder').click();
+      await page.getByTestId('new-folder-name').fill('figures');
+      await page.keyboard.press('Enter');
+      // default is the source-only view — an empty folder must still show,
+      // or it looks like the button did nothing
+      await expect(page.getByTestId('dir-figures')).toBeVisible();
+      // a slash path nests, and a duplicate is refused with a toast
+      await page.getByTestId('new-folder').click();
+      await page.getByTestId('new-folder-name').fill('figures');
+      await page.keyboard.press('Enter');
+      await expect(page.locator('.toast__text').filter({ hasText: 'already exists' })).toBeVisible();
+      const files = await (await request.get(`/api/projects/${id}/files?branch=main`)).json();
+      expect(files.files).toContainEqual({ path: 'figures', type: 'dir' });
+      // the folder outlives its emptiness: a file dropped in by path lists inside
+      await request.put(`/api/projects/${id}/file`, { data: { branch: 'main', path: 'figures/a.tex', content: 'A\n' } });
+      await expect(page.getByTestId('file-figures/a.tex')).toBeVisible({ timeout: 15_000 });
+    } finally { await cleanup(request, id); }
+  });
+});

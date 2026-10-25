@@ -189,6 +189,13 @@ export function writeFile(id: string, branch: string, rel: string, content: stri
   fs.writeFileSync(abs, content);
 }
 
+/** An empty folder ahead of its first file. Git won't track it (empty trees
+ *  aren't commits' material), so it lives in the worktree only — the tree
+ *  listing reads the filesystem and shows it until a file lands inside. */
+export function createFolder(id: string, branch: string, rel: string): void {
+  fs.mkdirSync(safeJoin(branchDir(id, branch), rel), { recursive: true });
+}
+
 export function deleteFile(id: string, branch: string, rel: string): void {
   fs.rmSync(safeJoin(branchDir(id, branch), rel), { recursive: true, force: true });
 }

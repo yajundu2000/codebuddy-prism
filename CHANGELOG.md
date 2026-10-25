@@ -7,6 +7,12 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Files panel: "+ New folder" creates a folder ahead of its first file
+  (`POST /api/projects/:id/folder`; a slash path nests). Empty folders stay
+  visible in the default source-only view instead of being pruned away, and
+  a duplicate name is refused with a toast. Git holds no empty trees, so the
+  folder lives in the worktree until its first file lands inside (which is
+  when it reaches history).
 - Files panel: folders get the context menu too — Rename… (children move
   with the folder; an open file inside follows to its new path) and Delete
   (confirm names the blast radius: the folder and every file inside it).

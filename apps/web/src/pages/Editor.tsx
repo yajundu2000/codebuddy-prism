@@ -1085,6 +1085,14 @@ export default function Editor() {
                     else toast(`Could not create file: ${err.message}`, 'error');
                   }
                 }}
+                onCreateFolder={async (path) => {
+                  try {
+                    await api.createFolder(id, branch, path);
+                    await loadFiles();
+                  } catch (err: any) {
+                    toast(/already exists/i.test(err?.message) ? `"${path}" already exists` : `Could not create folder: ${err.message}`, 'error');
+                  }
+                }}
                 onUploaded={async (paths) => {
                   await loadFiles();
                   toast(paths.length === 1 ? `Uploaded ${paths[0]}` : `Uploaded ${paths.length} files`, 'ok');

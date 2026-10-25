@@ -11,7 +11,7 @@ import * as remotes from './remotes.js';
 import * as gitlab from './gitlab.js';
 import { provisioningEnabled, provisionProject, deprovisionProject, rootGroup, withinRoot, type DeprovisionResult } from './provision.js';
 import { scheduleAutopush, cancelAutopush, lastPushedHead } from './autopush.js';
-import { flushBranchDocs, refreshBranchDocsFromDisk, evictDoc, liveChildDocPaths, scheduleCommit, closeProjectConnections, markPathsChanged, markTreeChanged, contentVersion, fileVersion, versionConflict, applySuggestionToDoc, protectedProjects, agentSessionActive } from './collab.js';
+import { flushBranchDocs, refreshBranchDocsFromDisk, evictDoc, liveChildDocPaths, scheduleCommit, closeProjectConnections, markPathsChanged, markTreeChanged, contentVersion, fileVersion, versionConflict, applySuggestionToDoc, protectedProjects, agentSessionActive, bumpFilesSignal } from './collab.js';
 import { publishProjectEvent } from './events.js';
 import { trashProject } from './trash.js';
 import { listPlugins, pluginAssetPath } from './plugins.js';
@@ -959,6 +959,22 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
         }
       } catch { /* meta unreadable — leave as-is */ }
       return { ok: true, ...(newRoot ? { newRoot } : {}) };
+    });
+
+  app.post<{ Params: { id: string }; Body: { branch?: string; path: string } }>(
+    '/api/projects/:id/folder', async (req, reply) => {
+      const { branch = 'main', path: rel } = req.body || {};
+      if (!rel) return reply.code(400).send({ error: 'path required' });
+      if (isHiddenPath(rel)) return reply.code(403).send({ error: 'forbidden path' });
+      if (optionLikePath(rel.split('/').pop() || '')) return reply.code(400).send({ error: 'Folder name cannot start with "-"' });
+      if (store.fileExists(req.params.id, branch, rel)) {
+        return reply.code(409).send({ error: `"${rel}" already exists` });
+      }
+      store.createFolder(req.params.id, branch, rel);
+      // nothing to commit (git holds no empty trees); other tabs still need
+      // the new folder in their tree
+      bumpFilesSignal(req.params.id, branch);
+      return { ok: true };
     });
 
   app.delete<{ Params: { id: string }; Querystring: Q }>('/api/projects/:id/file', async (req, reply) => {

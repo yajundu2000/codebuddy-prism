@@ -13,6 +13,7 @@ interface Props {
   branch: string;
   onOpen(path: string): void;
   onCreate(path: string): void;
+  onCreateFolder(path: string): void;
   onUploaded(paths: string[]): void;
   onDelete(path: string): void;
   onRename(from: string, to: string): void;
@@ -74,18 +75,18 @@ export function stemEnd(path: string): number {
   return dot > path.lastIndexOf('/') + 1 ? dot : path.length;
 }
 
-export default function FileTree({ files, active, rootFile, projectId, branch, onOpen, onCreate, onUploaded, onDelete, onRename, onSetRoot, newFileRequest = 0, onNewFileHandled }: Props) {
+export default function FileTree({ files, active, rootFile, projectId, branch, onOpen, onCreate, onCreateFolder, onUploaded, onDelete, onRename, onSetRoot, newFileRequest = 0, onNewFileHandled }: Props) {
   const dialogs = useDialogs();
   const toast = useToast();
   const leave = useExitGhost();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<null | 'file' | 'folder'>(null);
   const [name, setName] = useState('');
   // A project with no files of the user's own (the .gitignore every project
   // carries does not count) gets main.tex suggested: that name also makes the
   // file the typeset root without a further step.
   const startAdding = () => {
     setName(files.some((f) => f.type === 'file' && !f.path.split('/').pop()!.startsWith('.')) ? '' : 'main.tex');
-    setAdding(true);
+    setAdding('file');
   };
   useEffect(() => { if (newFileRequest) { startAdding(); onNewFileHandled?.(); } }, [newFileRequest]);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number; isDir?: boolean } | null>(null);
@@ -125,21 +126,24 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
   const tree = useMemo(() => {
     const full = buildTree(files);
     if (!sourceOnly) return full;
-    // keep source files + any directory that (recursively) contains one
+    // keep source files + any directory that (recursively) contains one;
+    // an empty directory stays too, or a freshly created folder would
+    // vanish from this view before its first file lands in it
     const SOURCE = /\.(tex|bib|cls|bbx|cbx|sty|bst|png|jpe?g|pdf|eps|svg|tikz)$/i;
     const prune = (nodes: Node[]): Node[] => nodes.map((n) => {
       if (n.type === 'file') return SOURCE.test(n.name) ? n : null;
       const kids = prune(n.children);
-      return kids.length ? { ...n, children: kids } : null;
+      return kids.length || !n.children.length ? { ...n, children: kids } : null;
     }).filter(Boolean) as Node[];
     return prune(full);
   }, [files, sourceOnly]);
 
   const submit = () => {
-    const n = name.trim();
-    setAdding(false);
+    const n = name.trim().replace(/^\/+|\/+$/g, ''); // folders may be typed with slashes
+    const kind = adding;
+    setAdding(null);
     setName('');
-    if (n) onCreate(n);
+    if (n) (kind === 'folder' ? onCreateFolder : onCreate)(n);
   };
 
   const uploadFiles = async (list: FileList | File[]) => {
@@ -281,13 +285,15 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
 
       {adding ? (
         <input
-          autoFocus className="input" style={{ margin: '4px 0' }} placeholder="chapter.tex" value={name} data-testid="new-file-name"
+          autoFocus className="input" style={{ margin: '4px 0' }} placeholder={adding === 'folder' ? 'figures 或 chapters/figs' : 'chapter.tex'}
+          value={name} data-testid={adding === 'folder' ? 'new-folder-name' : 'new-file-name'}
           onChange={(e) => setName(e.target.value)} onBlur={submit}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setAdding(false); setName(''); } }}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setAdding(null); setName(''); } }}
         />
       ) : (
         <div className="tree__actions">
           <button className="btn btn--ghost btn--small" onClick={startAdding} data-testid="new-file">+ New file</button>
+          <button className="btn btn--ghost btn--small" onClick={() => { setName(''); setAdding('folder'); }} data-testid="new-folder">+ New folder</button>
           <button className="btn btn--ghost btn--small" onClick={() => fileInput.current?.click()} data-testid="upload-file">↑ Upload</button>
           <button className="btn btn--ghost btn--small" onClick={() => setSourceOnly((v) => !v)} data-testid="source-only" title="Show only LaTeX source & images">{sourceOnly ? '☰ All' : '⌇ Source'}</button>
           <input ref={fileInput} type="file" multiple hidden data-testid="upload-input"
