@@ -7,6 +7,12 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Files panel: folders get the context menu too — Rename… (children move
+  with the folder; an open file inside follows to its new path) and Delete
+  (confirm names the blast radius: the folder and every file inside it).
+  Deleting a folder now also evicts the live collab docs of its children,
+  closing the same resurrect-old-files hole the rename path fixed. Folder
+  menus offer no "Set as main document" (only files can be the root).
 - Files panel: drag a file (or a folder) onto a directory, another file, or
   the panel's empty space to move it — same backend path as Rename…, with a
   drop highlight, a no-op guard for dragging a folder into its own subtree,

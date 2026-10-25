@@ -967,6 +967,9 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     if (isHiddenPath(rel)) return reply.code(403).send({ error: 'forbidden path' });
     const wasDir = store.isDirectory(req.params.id, branch, rel);
     evictDoc(req.params.id, branch, rel); // prevent resurrection via pending store
+    // a folder delete takes every child with it — their live docs must go too,
+    // or the next autosave store would resurrect the deleted files
+    if (wasDir) for (const child of liveChildDocPaths(req.params.id, branch, rel)) evictDoc(req.params.id, branch, child);
     store.deleteFile(req.params.id, branch, rel);
     // a directory delete removes every child, which a single path mark would miss
     if (wasDir) markTreeChanged(req.params.id, branch);

@@ -1095,7 +1095,8 @@ export default function Editor() {
                     await api.deleteFile(id, branch, path);
                     await loadFiles();
                     loadProject(); // deleting the root re-derives (or unsets) it
-                    if (activeFile === path) setActiveFile(null);
+                    // a folder delete takes any open file inside it down too
+                    if (activeFile === path || activeFile?.startsWith(`${path}/`)) setActiveFile(null);
                   } finally {
                     setTimeout(() => { if (localRemoval.current === path) localRemoval.current = null; }, 0);
                   }
@@ -1106,7 +1107,9 @@ export default function Editor() {
                     await api.renameFile(id, branch, from, to);
                     await loadFiles();
                     loadProject(); // the root designation may have moved with the rename
+                    // a folder rename carries any open file inside it along
                     if (activeFile === from) setActiveFile(to);
+                    else if (activeFile?.startsWith(`${from}/`)) setActiveFile(to + activeFile.slice(from.length));
                   } catch (err: any) {
                     toast(/already exists/i.test(err?.message) ? `"${to}" already exists` : `Could not rename: ${err.message}`, 'error');
                   } finally {

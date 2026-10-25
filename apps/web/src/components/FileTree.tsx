@@ -88,7 +88,7 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
     setAdding(true);
   };
   useEffect(() => { if (newFileRequest) { startAdding(); onNewFileHandled?.(); } }, [newFileRequest]);
-  const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ path: string; x: number; y: number; isDir?: boolean } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // The menu opens at the pointer; near the right or bottom edge it would
   // hang off the window, so it is pulled back in before the first paint.
@@ -224,6 +224,7 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
             onClick={() => toggle(node.path)}
             data-testid={`dir-${node.path}`}
             title={node.path}
+            onContextMenu={(e) => { e.preventDefault(); setMenu({ path: node.path, x: e.clientX, y: e.clientY, isDir: true }); }}
             {...dragHandlers(node)}
             onDragOver={(e) => dragOverRow(e, node.path, node.path)}
             onDrop={(e) => dropRow(e, node.path)}
@@ -297,18 +298,24 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
 
       {menu && (
         <div ref={(el) => { menuRef.current = el; leave(el); }} className="menu" role="menu" style={{ left: menu.x, top: menu.y, position: 'fixed' }} onClick={(e) => e.stopPropagation()} data-testid="file-menu">
-          <button className="menu__item" onClick={() => { onSetRoot(menu.path); setMenu(null); }}>Set as main document</button>
+          {!menu.isDir && <button className="menu__item" onClick={() => { onSetRoot(menu.path); setMenu(null); }}>Set as main document</button>}
           <button className="menu__item" data-testid="file-menu-rename" onClick={async () => {
             const from = menu.path;
             setMenu(null);
-            const to = (await dialogs.prompt({ title: `Rename ${from}`, value: from, confirmLabel: 'Rename', selectTo: stemEnd(from) }))?.trim();
+            const to = (await dialogs.prompt({ title: `Rename ${from}`, value: from, confirmLabel: 'Rename', selectTo: menu.isDir ? undefined : stemEnd(from) }))?.trim();
             if (to && to !== from) onRename(from, to);
           }}>Rename…</button>
           <div className="menu__sep" />
           <button className="menu__item" data-testid="file-menu-delete" onClick={async () => {
             const path = menu.path;
+            const isDir = !!menu.isDir;
             setMenu(null);
-            if (await dialogs.confirm({ title: `Delete ${path}?`, confirmLabel: 'Delete file', danger: true })) onDelete(path);
+            if (await dialogs.confirm({
+              title: `Delete ${path}?`,
+              body: isDir ? 'The folder and every file inside it will be deleted.' : undefined,
+              confirmLabel: isDir ? 'Delete folder' : 'Delete file',
+              danger: true,
+            })) onDelete(path);
           }}>Delete</button>
         </div>
       )}

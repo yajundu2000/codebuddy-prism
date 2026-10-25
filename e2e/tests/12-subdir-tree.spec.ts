@@ -198,3 +198,45 @@ test.describe('drag to move', () => {
     } finally { await cleanup(request, id); }
   });
 });
+
+test.describe('folder context menu', () => {
+  const put = (request: any, id: string, path: string, content: string) =>
+    request.put(`/api/projects/${id}/file`, { data: { branch: 'main', path, content } });
+
+  test('renaming a folder from its context menu moves its children', async ({ page, request }) => {
+    const id = await createProject(request, 'Dir Rename Menu');
+    try {
+      await put(request, id, 'old/chapter.tex', 'CHAPTER\n');
+      await openProject(page, id);
+      await page.getByTestId('dir-old').click({ button: 'right' });
+      await expect(page.getByTestId('file-menu')).toBeVisible();
+      // folder menu offers no "Set as main document"
+      await expect(page.getByTestId('file-menu').getByText('Set as main document')).toHaveCount(0);
+      await page.getByTestId('file-menu-rename').click();
+      await page.getByTestId('dialog-input').fill('new');
+      await page.getByTestId('dialog-confirm').click();
+      await expect(page.getByTestId('dir-new')).toBeVisible();
+      await expect(page.getByTestId('file-new/chapter.tex')).toBeVisible();
+      const got = await (await request.get(`/api/projects/${id}/file?branch=main&path=new/chapter.tex`)).text();
+      expect(got).toBe('CHAPTER\n');
+    } finally { await cleanup(request, id); }
+  });
+
+  test('deleting a folder removes its children and warns about them', async ({ page, request }) => {
+    const id = await createProject(request, 'Dir Delete Menu');
+    try {
+      await put(request, id, 'gone/inner/leaf.tex', 'LEAF\n');
+      await put(request, id, 'gone/other.tex', 'OTHER\n');
+      await openProject(page, id);
+      await page.getByTestId('dir-gone').click({ button: 'right' });
+      await page.getByTestId('file-menu-delete').click();
+      // the confirm names the folder's blast radius before anything happens
+      await expect(page.getByText('every file inside it')).toBeVisible();
+      await page.getByTestId('dialog-confirm').click();
+      await expect(page.getByTestId('dir-gone')).toHaveCount(0);
+      await expect(page.getByTestId('file-gone/inner/leaf.tex')).toHaveCount(0);
+      const res = await request.get(`/api/projects/${id}/file?branch=main&path=gone/other.tex`);
+      expect(res.status()).toBe(404);
+    } finally { await cleanup(request, id); }
+  });
+});
