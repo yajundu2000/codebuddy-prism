@@ -105,3 +105,96 @@ test.describe('file guards (QA regressions)', () => {
     }
   });
 });
+
+test.describe('drag to move', () => {
+  const put = (request: any, id: string, path: string, content: string) =>
+    request.put(`/api/projects/${id}/file`, { data: { branch: 'main', path, content } });
+  const read = async (request: any, id: string, path: string) =>
+    (await (await request.get(`/api/projects/${id}/file?branch=main&path=${path}`)).text());
+
+  test('dragging a file into a directory moves it, content intact, no upload overlay', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag Into Dir');
+    try {
+      await put(request, id, 'chapters/intro.tex', 'INTRO-BODY\n');
+      await put(request, id, 'loose.tex', 'LOOSE-BODY\n');
+      await openProject(page, id);
+      await page.getByTestId('file-loose.tex').dragTo(page.getByTestId('dir-chapters'));
+      await expect(page.getByTestId('file-chapters/loose.tex')).toBeVisible();
+      await expect(page.getByTestId('file-loose.tex')).toHaveCount(0);
+      // the OS-file upload overlay must not have claimed the internal drag —
+      // a drop on a row never reaches the container, so it would be stuck
+      await expect(page.locator('.filetree--drag')).toHaveCount(0);
+      await page.getByTestId('file-chapters/loose.tex').click();
+      await expect(page.locator('.cm-content')).toContainText('LOOSE-BODY');
+    } finally { await cleanup(request, id); }
+  });
+
+  test('dropping on a file row lands the file in that row\'s directory', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag Onto File');
+    try {
+      await put(request, id, 'chapters/intro.tex', 'INTRO-BODY\n');
+      await put(request, id, 'loose.tex', 'LOOSE-BODY\n');
+      await openProject(page, id);
+      await page.getByTestId('file-loose.tex').dragTo(page.getByTestId('file-chapters/intro.tex'));
+      await expect(page.getByTestId('file-chapters/loose.tex')).toBeVisible();
+      await expect(page.getByTestId('file-loose.tex')).toHaveCount(0);
+    } finally { await cleanup(request, id); }
+  });
+
+  test('dropping on the panel empty space moves the file back to the root', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag To Root');
+    try {
+      await put(request, id, 'chapters/loose.tex', 'LOOSE-BODY\n');
+      await put(request, id, 'chapters/intro.tex', 'INTRO-BODY\n');
+      await openProject(page, id);
+      // the hint line sits in the panel but is not a row → container drop = root
+      await page.getByTestId('file-chapters/loose.tex').dragTo(page.locator('.filetree__hint'));
+      await expect(page.getByTestId('file-loose.tex')).toBeVisible();
+      await expect(page.getByTestId('file-chapters/loose.tex')).toHaveCount(0);
+      expect(await read(request, id, 'loose.tex')).toBe('LOOSE-BODY\n');
+    } finally { await cleanup(request, id); }
+  });
+
+  test('a name collision is refused: toast, both files untouched', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag Collision');
+    try {
+      await put(request, id, 'loose.tex', 'ROOT-BODY\n');
+      await put(request, id, 'chapters/loose.tex', 'CHAPTERS-BODY\n');
+      await openProject(page, id);
+      await page.getByTestId('file-loose.tex').dragTo(page.getByTestId('dir-chapters'));
+      await expect(page.locator('.toast__text').filter({ hasText: 'already exists' })).toBeVisible();
+      await expect(page.getByTestId('file-loose.tex')).toBeVisible();
+      await expect(page.getByTestId('file-chapters/loose.tex')).toBeVisible();
+      expect(await read(request, id, 'loose.tex')).toBe('ROOT-BODY\n');
+      expect(await read(request, id, 'chapters/loose.tex')).toBe('CHAPTERS-BODY\n');
+    } finally { await cleanup(request, id); }
+  });
+
+  test('dragging a directory moves its children with it', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag Dir');
+    try {
+      await put(request, id, 'figs/diag.tex', 'DIAG-BODY\n');
+      await put(request, id, 'chapters/intro.tex', 'INTRO-BODY\n');
+      await openProject(page, id);
+      await page.getByTestId('dir-figs').dragTo(page.getByTestId('dir-chapters'));
+      await expect(page.getByTestId('dir-chapters/figs')).toBeVisible();
+      await expect(page.getByTestId('file-chapters/figs/diag.tex')).toBeVisible();
+      await expect(page.getByTestId('dir-figs')).toHaveCount(0);
+      await page.getByTestId('file-chapters/figs/diag.tex').click();
+      await expect(page.locator('.cm-content')).toContainText('DIAG-BODY');
+    } finally { await cleanup(request, id); }
+  });
+
+  test('a directory dragged into its own subtree stays put', async ({ page, request }) => {
+    const id = await createProject(request, 'Drag Dir Into Self');
+    try {
+      await put(request, id, 'outer/inner/leaf.tex', 'LEAF\n');
+      await put(request, id, 'other.tex', 'OTHER\n');
+      await openProject(page, id);
+      await page.getByTestId('dir-outer').dragTo(page.getByTestId('dir-outer/inner'));
+      await expect(page.getByTestId('dir-outer')).toBeVisible();
+      await expect(page.getByTestId('file-outer/inner/leaf.tex')).toBeVisible();
+      expect(await read(request, id, 'outer/inner/leaf.tex')).toBe('LEAF\n');
+    } finally { await cleanup(request, id); }
+  });
+});

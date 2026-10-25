@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type JSX } from 'react';
 import { ApiError, TreeEntry, api } from '../api';
 import { fileIcon } from './Icons';
 import { useDialogs } from './Dialogs';
+import { useToast } from './Toast';
 import { useExitGhost } from '../exitGhost';
 
 interface Props {
@@ -26,6 +27,13 @@ interface Props {
 }
 
 const MAX_UPLOAD = 10 * 1024 * 1024;
+
+/** Wire type for dragging a tree row to another place in the same tree. Data
+ *  is unreadable during dragover, so targets test `types` — and this type is
+ *  what keeps the OS-file-upload overlay out of internal drags. */
+const DND_PATH = 'application/x-aldine-path';
+const parentDir = (p: string) => { const i = p.lastIndexOf('/'); return i === -1 ? '' : p.slice(0, i); };
+const baseName = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
 interface Node { name: string; path: string; type: 'file' | 'dir'; binary?: boolean; children: Node[] }
 
@@ -68,6 +76,7 @@ export function stemEnd(path: string): number {
 
 export default function FileTree({ files, active, rootFile, projectId, branch, onOpen, onCreate, onUploaded, onDelete, onRename, onSetRoot, newFileRequest = 0, onNewFileHandled }: Props) {
   const dialogs = useDialogs();
+  const toast = useToast();
   const leave = useExitGhost();
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -158,13 +167,67 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
     if (done.length) onUploaded(done);
   };
 
+  // --- drag a row to another directory (move) ---
+  // `dropAt.row` is the row under the pointer (a dir row, a file row as a
+  // proxy for its parent directory, or '' for the panel's root); `dropAt.dir`
+  // is the directory the source would land in.
+  const [dragFrom, setDragFrom] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<{ row: string; dir: string } | null>(null);
+  const endDrag = () => { setDragFrom(null); setDropAt(null); };
+  const internalDrag = (e: DragEvent) => e.dataTransfer.types.includes(DND_PATH);
+  /** A dir can't move into itself or its own subtree; anything else lands. */
+  const canLand = (dir: string) => !!dragFrom && dir !== dragFrom && !dir.startsWith(dragFrom + '/');
+  const dragHandlers = (node: Node) => ({
+    draggable: true,
+    onDragStart: (e: DragEvent) => {
+      e.dataTransfer.setData(DND_PATH, node.path);
+      e.dataTransfer.effectAllowed = 'move';
+      setDragFrom(node.path);
+    },
+    onDragEnd: endDrag,
+  });
+  /** Hovering a row offers `dir` as the landing directory. */
+  const dragOverRow = (e: DragEvent, row: string, dir: string) => {
+    if (!internalDrag(e)) return; // OS files keep their upload overlay path
+    e.preventDefault();
+    e.stopPropagation();
+    if (canLand(dir)) { e.dataTransfer.dropEffect = 'move'; setDropAt({ row, dir }); }
+    else setDropAt(null);
+  };
+  const dropRow = (e: DragEvent, dir: string) => {
+    if (!internalDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    endDrag();
+    moveTo(dir);
+  };
+  const moveTo = (dir: string) => {
+    const from = dragFrom;
+    if (!from) return;
+    const to = dir ? `${dir}/${baseName(from)}` : baseName(from);
+    if (to === from) return;
+    // the server 409s on an existing target; predicting it here from the
+    // loaded tree avoids the round-trip and matches that error's wording
+    if (files.some((f) => f.path === to)) { toast(`"${to}" already exists`, 'error'); return; }
+    onRename(from, to); // the same path the Rename… menu item takes
+  };
+
   const renderNode = (node: Node, depth: number): JSX.Element => {
     const pad = 8 + depth * 13;
     if (node.type === 'dir') {
       const open = isOpen(node.path);
       return (
         <div key={node.path}>
-          <button className="tree__item tree__dir" style={{ paddingLeft: pad }} onClick={() => toggle(node.path)} data-testid={`dir-${node.path}`} title={node.path}>
+          <button
+            className={`tree__item tree__dir ${dragFrom === node.path ? 'tree__item--dragging' : ''} ${dropAt?.row === node.path ? 'tree__item--drop' : ''}`}
+            style={{ paddingLeft: pad }}
+            onClick={() => toggle(node.path)}
+            data-testid={`dir-${node.path}`}
+            title={node.path}
+            {...dragHandlers(node)}
+            onDragOver={(e) => dragOverRow(e, node.path, node.path)}
+            onDrop={(e) => dropRow(e, node.path)}
+          >
             <span className={`tree__chevron ${open ? 'tree__chevron--open' : ''}`}>▸</span>
             <span className="tree__icon"><FolderIcon /></span>
             {node.name}
@@ -176,12 +239,15 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
     return (
       <button
         key={node.path}
-        className={`tree__item ${active === node.path ? 'tree__item--active' : ''}`}
+        className={`tree__item ${active === node.path ? 'tree__item--active' : ''} ${dragFrom === node.path ? 'tree__item--dragging' : ''} ${dropAt?.row === node.path ? 'tree__item--drop' : ''}`}
         style={{ paddingLeft: pad }}
         data-testid={`file-${node.path}`}
         onClick={() => !node.binary && onOpen(node.path)}
         onContextMenu={(e) => { e.preventDefault(); setMenu({ path: node.path, x: e.clientX, y: e.clientY }); }}
         title={node.path}
+        {...dragHandlers(node)}
+        onDragOver={(e) => dragOverRow(e, node.path, parentDir(node.path))}
+        onDrop={(e) => dropRow(e, parentDir(node.path))}
       >
         <span className="tree__icon">{fileIcon(node.path, node.path === rootFile)}</span>
         {node.name}
@@ -192,12 +258,23 @@ export default function FileTree({ files, active, rootFile, projectId, branch, o
 
   return (
     <div
-      className={`panel-list filetree ${dragOver ? 'filetree--drag' : ''}`}
+      className={`panel-list filetree ${dragOver ? 'filetree--drag' : ''} ${dropAt?.row === '' ? 'filetree--droproot' : ''}`}
       data-testid="file-tree"
       onClick={() => setMenu(null)}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        // OS files → upload overlay; a dragged tree row → the panel is the
+        // "move to project root" target. Rows stop their own propagation, so
+        // this only sees drags over the panel's empty space.
+        if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setDragOver(true); return; }
+        if (dragFrom) { e.preventDefault(); setDropAt({ row: '', dir: '' }); }
+      }}
       onDragLeave={() => setDragOver(false)}
-      onDrop={async (e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) await uploadFiles(e.dataTransfer.files); }}
+      onDrop={async (e) => {
+        e.preventDefault();
+        setDragOver(false);
+        if (e.dataTransfer.files.length) { await uploadFiles(e.dataTransfer.files); return; }
+        if (internalDrag(e)) { endDrag(); moveTo(''); }
+      }}
     >
       {tree.map((n) => renderNode(n, 0))}
 

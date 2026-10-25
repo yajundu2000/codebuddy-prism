@@ -7,6 +7,14 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Files panel: drag a file (or a folder) onto a directory, another file, or
+  the panel's empty space to move it — same backend path as Rename…, with a
+  drop highlight, a no-op guard for dragging a folder into its own subtree,
+  and a client-side name-collision refusal (never overwrites; the server's
+  409 stays as backstop). Internal drags no longer light up the "Drop files
+  to upload" overlay. Directory moves now also evict the live collab docs of
+  every file inside the folder, so an open editor can no longer resurrect
+  the old directory with stale content.
 - The signed-out gate is now a landing page: an Overleaf-style pitch (hero
   with the sign-in card embedded, stat band, four feature blocks with real
   product screenshots, template/venue chips, three plan tiers without

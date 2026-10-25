@@ -914,6 +914,28 @@
   pointer-events: none;
 }
 .filetree__hint { color: var(--text-3); font-size: var(--text-xs); text-align: center; margin: 10px 0 4px; }
+
+/* file tree drag-to-move: the row being dragged dims, the row under the
+   pointer (or the panel itself, for a move to the project root) lights up */
+.tree__item--dragging { opacity: 0.45; }
+.tree__item--drop {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.filetree--droproot::after {
+  content: 'Move to project root';
+  position: absolute;
+  inset: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-m);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  pointer-events: none;
+}
 .pdf-empty {
   position: absolute;
   inset: 0;

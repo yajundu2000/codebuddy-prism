@@ -11,7 +11,7 @@ import * as remotes from './remotes.js';
 import * as gitlab from './gitlab.js';
 import { provisioningEnabled, provisionProject, deprovisionProject, rootGroup, withinRoot, type DeprovisionResult } from './provision.js';
 import { scheduleAutopush, cancelAutopush, lastPushedHead } from './autopush.js';
-import { flushBranchDocs, refreshBranchDocsFromDisk, evictDoc, scheduleCommit, closeProjectConnections, markPathsChanged, markTreeChanged, contentVersion, fileVersion, versionConflict, applySuggestionToDoc, protectedProjects, agentSessionActive } from './collab.js';
+import { flushBranchDocs, refreshBranchDocsFromDisk, evictDoc, liveChildDocPaths, scheduleCommit, closeProjectConnections, markPathsChanged, markTreeChanged, contentVersion, fileVersion, versionConflict, applySuggestionToDoc, protectedProjects, agentSessionActive } from './collab.js';
 import { publishProjectEvent } from './events.js';
 import { trashProject } from './trash.js';
 import { listPlugins, pluginAssetPath } from './plugins.js';
@@ -934,6 +934,9 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
       const wasDir = store.isDirectory(req.params.id, branch, from);
       // evict the source doc so its final store can't recreate the old file
       evictDoc(req.params.id, branch, from);
+      // a directory move drags its children along — evict their live docs
+      // too, or the next autosave store would recreate the old directory
+      if (wasDir) for (const child of liveChildDocPaths(req.params.id, branch, from)) evictDoc(req.params.id, branch, child);
       store.renameFile(req.params.id, branch, from, to);
       // bib/label indexes carry file paths; a directory rename moves every child
       if (wasDir) markTreeChanged(req.params.id, branch);

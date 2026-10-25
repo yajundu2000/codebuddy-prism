@@ -409,6 +409,21 @@ export function shutdownFlushSet(): { projectId: string; branch: string }[] {
   return [...set.values()];
 }
 
+/** Live doc paths under a directory (the directory itself excluded) — the
+ *  children a directory rename/move drags along. evictDoc takes one exact
+ *  path, so a caller moving a folder needs this list or the moved children's
+ *  next autosave store would recreate the old directory with stale text. */
+export function liveChildDocPaths(projectId: string, branch: string, dir: string): string[] {
+  const prefix = `${projectId}::${branch}::${dir}/`;
+  const out: string[] = [];
+  for (const name of hocuspocus.documents.keys()) {
+    if (!name.startsWith(prefix)) continue;
+    const parsed = parseDocName(name);
+    if (parsed) out.push(parsed.filePath);
+  }
+  return out;
+}
+
 /**
  * Evict a doc so its pending final store won't resurrect a deleted/renamed file.
  * Removes it from Hocuspocus's registry after tombstoning.
