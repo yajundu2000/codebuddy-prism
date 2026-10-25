@@ -22,7 +22,7 @@ import { addGbtReference, addReference, fetchBibEntry, GbtParseError, resolveApp
 import { bibIndex, labelIndex, wordCount } from './indexes.js';
 import { unzip, zipEntryCount, ZipError } from './unzip.js';
 import { guessRoot, detectRoot, adoptRootIfUnset } from './root.js';
-import { config } from './config.js';
+import { config, repoRoot } from './config.js';
 import { detectEngine, decodeText } from './detect.js';
 import { multipartBoundary, parseMultipart } from './multipart.js';
 import { aiConfigured, aiModel, diagnose, chatConfigured, aiModels, type ChatMsg } from './ai.js';
@@ -148,7 +148,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // from the instance itself (the About dialog links here). The tarball is
   // packed by deploy.sh into the image; a dev checkout has none → 404.
   app.get('/source-code.tar.gz', async (_req, reply) => {
-    const file = path.join(process.cwd(), 'source-code.tar.gz');
+    // the image places the bundle at the repo root (/srv), the app runs from
+    // apps/server — repoRoot resolves to the same place in a dev checkout
+    const file = path.join(repoRoot, 'source-code.tar.gz');
     try {
       const buf = await fs.promises.readFile(file);
       reply.header('content-type', 'application/gzip').header('content-disposition', 'attachment; filename="source-code.tar.gz"');

@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '../../..');
+/** The repo root: /srv in the app image (where deploy.sh's source bundle lands), the checkout in dev. */
+export const repoRoot = path.resolve(__dirname, '../../..');
 
 /**
  * The URL path Aldine is served under: '' for the root, '/internal/aldine' for

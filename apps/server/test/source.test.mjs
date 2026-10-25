@@ -19,8 +19,9 @@ await registerRoutes(app);
 let r = await app.inject({ url: '/source-code.tar.gz' });
 check(r.statusCode === 404, 'no bundle in the tree → 404: ' + r.statusCode);
 
-// a packed build serves it from the image root
-const fake = path.join(process.cwd(), 'source-code.tar.gz');
+// a packed build serves it from the repo root (the image places it at /srv)
+const { repoRoot } = await import('../src/config.ts');
+const fake = path.join(repoRoot, 'source-code.tar.gz');
 fs.writeFileSync(fake, 'not-really-gzip');
 try {
   const app2 = Fastify(); await registerRoutes(app2);
