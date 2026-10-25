@@ -35,6 +35,9 @@ test.describe('auth', () => {
     // the source offer stays same-site (no external repo links anywhere)
     await expect(page.locator('[data-testid="landing"] a[href*="github"]')).toHaveCount(0);
     await expect(page.getByTestId('landing-oss').getByRole('link')).toHaveAttribute('href', /source-code\.tar\.gz$/);
+    // the filing line mirrors the wenzao.site footer (ICP + 公安 with badge)
+    await expect(page.getByTestId('landing-beian')).toContainText('粤ICP备2026116494号-1');
+    await expect(page.getByTestId('landing-beian')).toContainText('粤公网安备44011402001422号');
   });
 
   test('register, create a project, sign out, sign back in — project persists', async ({ page }) => {

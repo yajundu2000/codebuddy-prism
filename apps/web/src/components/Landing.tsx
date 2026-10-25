@@ -196,6 +196,14 @@ export default function Landing({ login }: { login: ReactNode }) {
           <p className="landing__footer-note">TeX写作智能体 · 广州深蓝湾流信息技术有限公司</p>
         </div>
         <p className="landing__footer-note">商务微信 yajun__du · 邮箱 yajundu@126.com · AGPL-3.0 · <a href={withBase('/source-code.tar.gz')} download>源码</a> · © 2026</p>
+        {/* 备案沿用主体站 wenzao.site（同一运营主体：深蓝湾流） */}
+        <p className="landing__beian" data-testid="landing-beian">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">粤ICP备2026116494号-1</a>
+          <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011402001422" target="_blank" rel="noreferrer">
+            <img src={withBase('/landing/beian-logo.png')} alt="" width={12} height={13} decoding="async" />
+            粤公网安备44011402001422号
+          </a>
+        </p>
       </footer>
     </div>
   );

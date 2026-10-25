@@ -177,4 +177,4 @@ panel 底 + 1px 发丝边 + 12px 圆角；featured 变体 1.5px 紫边 + raised 
 - **Don't** 把眉标/胶囊/浏览器框带进应用界面（Operate 面）——那是落地面专属语法。
 - **Don't** 用插画、图标库、emoji、点阵替代真实截图。
 - **Don't** 静态卡片加影；影只陈述"悬着的屏幕"。
-- **Don't** 在对外表面出现 github.com 链接、价格数字、编造的备案号（PRODUCT.md 红线）。
+- **Don't** 在对外表面出现 github.com 链接或价格数字；备案号只用主体站 wenzao.site 的（粤ICP备2026116494号-1 / 粤公网安备44011402001422号），不编造其他号（PRODUCT.md 红线）。
