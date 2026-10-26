@@ -7,6 +7,14 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Editor tabs: every file opened this session keeps a tab above the editor;
+  clicking switches (only the active pane stays mounted), and switching back
+  restores the cursor line and scroll position. Tabs close with × (closing
+  the active one activates its neighbour, closing the last shows the empty
+  state), follow renames and folder moves, and drop themselves when their
+  file is deleted from elsewhere; the palette gains "Close tab". A
+  `?file=&line=` deep link or an error-row jump still outranks the restored
+  position.
 - Files panel: "+ New folder" creates a folder ahead of its first file
   (`POST /api/projects/:id/folder`; a slash path nests). Empty folders stay
   visible in the default source-only view instead of being pruned away, and

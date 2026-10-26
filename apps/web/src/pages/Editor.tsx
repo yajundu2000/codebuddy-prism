@@ -8,7 +8,7 @@ import { useAuth } from '../components/Auth';
 import ShareModal from '../components/ShareModal';
 import About from '../components/About';
 import FileTree, { stemEnd } from '../components/FileTree';
-import CodePane, { CodePaneHandle, EditorMode } from '../components/CodePane';
+import CodePane, { CodePaneHandle, EditorMode, forgetViewState } from '../components/CodePane';
 import PdfPane, { PdfPaneHandle } from '../components/PdfPane';
 import BranchMenu from '../components/BranchMenu';
 import HistoryPanel from '../components/HistoryPanel';
@@ -70,6 +70,22 @@ export default function Editor() {
   const [filesLoaded, setFilesLoaded] = useState(false);
   const [newFileRequest, setNewFileRequest] = useState(0);
   const [activeFile, setActiveFile] = useState<string | null>(null);
+  // The editor tab bar: every file opened this session, in open order. Only
+  // the active one is mounted; the rest keep cursor/scroll via CodePane's
+  // view-state stash and remount on switch.
+  const [openFiles, setOpenFiles] = useState<string[]>([]);
+  const openFile = (path: string) => {
+    setActiveFile(path);
+    setOpenFiles((cur) => (cur.includes(path) ? cur : [...cur, path]));
+  };
+  const closeTab = (path: string) => {
+    const idx = openFiles.indexOf(path);
+    const next = openFiles.filter((p) => p !== path);
+    setOpenFiles(next);
+    // closing the active tab activates its left neighbour (or the survivor)
+    setActiveFile((a) => (a === path ? next[Math.max(0, idx - 1)] ?? null : a));
+    forgetViewState(id!, branch, path);
+  };
   const [tab, setTab] = useState<'files' | 'history' | string>('files');
   const [compile, setCompile] = useState<{ status: CompileStatus; result: CompileResult | null; wallMs?: number }>({ status: 'idle', result: null });
   const [pdfWidth, setPdfWidth] = useState(() => Math.max(360, Math.round(window.innerWidth * 0.4)));
@@ -254,7 +270,7 @@ export default function Editor() {
         : `"${norm}" is not in this project`, 'error');
     }
     const open = target ?? (dl.line != null ? p.rootFile : null);
-    if (open && f.some((e) => e.type === 'file' && e.path === open)) setActiveFile(open);
+    if (open && f.some((e) => e.type === 'file' && e.path === open)) openFile(open);
     // A line without a file means the root file; a line for a file that is
     // not here means nothing (line 12 of a missing chapter is not line 12 of main).
     const line = target || !norm ? dl.line : null;
@@ -285,6 +301,8 @@ export default function Editor() {
       const f = await loadFiles();
       const first = f.find((e) => e.path === p.rootFile) || f.find((e) => e.type === 'file' && e.path.endsWith('.tex')) || f.find((e) => isUserFile(e) && !e.binary);
       setActiveFile((cur) => (cur && f.some((e) => e.path === cur) ? cur : first?.path || null));
+      // the initially-opened file is the first tab
+      if (first) setOpenFiles((cur) => (cur.length ? cur : [first.path]));
       applyDeepLink(p, f);
       setFilesLoaded(true);
       // One-time nudge per project: work on an unlinked project exists only on
@@ -617,7 +635,7 @@ export default function Editor() {
       ?? files.find((f) => norm.endsWith('/' + f.path))
       ?? files.find((f) => f.path.endsWith('/' + norm))
     )?.path) || project.rootFile;
-    if (activeFile !== target) setActiveFile(target);
+    if (activeFile !== target) openFile(target);
     requestAnimationFrame(() => setTimeout(() => codeRef.current?.gotoLine(line), 60));
   };
 
@@ -698,13 +716,27 @@ export default function Editor() {
   // silent for those.
   const localRemoval = useRef<string | null>(null);
   useEffect(() => {
-    if (!filesLoaded || !activeFile || localRemoval.current === activeFile) return;
-    if (files.some((f) => f.path === activeFile)) return;
-    const next = files.find((e) => e.path === project?.rootFile)
-      || files.find((e) => e.type === 'file' && /\.tex$/i.test(e.path))
-      || files.find((e) => isUserFile(e) && !e.binary);
-    setActiveFile(next?.path || null);
-    toast(`${activeFile} was removed from the project by someone else`);
+    if (!filesLoaded) return;
+    // Own deletes/renames maintain the tab bar themselves — while one is in
+    // flight the refetch here would see the old path gone and clobber the
+    // handler's remap.
+    if (localRemoval.current) return;
+    // drop tabs whose file vanished (deleted/renamed elsewhere); keep the
+    // user's tab order for the survivors
+    const gone = openFiles.filter((p) => !files.some((f) => f.path === p));
+    if (!gone.length) return;
+    const next = openFiles.filter((p) => files.some((f) => f.path === p));
+    setOpenFiles(next);
+    gone.forEach((p) => forgetViewState(id!, branch, p));
+    if (activeFile && gone.includes(activeFile)) {
+      const fallback = next[0]
+        || files.find((e) => e.path === project?.rootFile)?.path
+        || files.find((e) => e.type === 'file' && /\.tex$/i.test(e.path))?.path
+        || null;
+      setActiveFile(fallback);
+      if (fallback && !next.includes(fallback)) setOpenFiles((cur) => [...cur, fallback]);
+      toast(`${activeFile} was removed from the project by someone else`);
+    }
   }, [files]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // push this file's comment ranges into the editor as highlight decorations
@@ -737,7 +769,7 @@ export default function Editor() {
   }, [composing, id, branch, activeFile, identity, loadComments, bumpComments, toast]);
 
   const revealComment = useCallback((c: Comment) => {
-    if (c.file !== activeFile) setActiveFile(c.file);
+    if (c.file !== activeFile) openFile(c.file);
     requestAnimationFrame(() => setTimeout(() => codeRef.current?.revealPos(c.anchor.from), 80));
   }, [activeFile]);
 
@@ -799,7 +831,7 @@ export default function Editor() {
         ?? files.find((f) => file.endsWith('/' + f.path))
         ?? files.find((f) => f.path.endsWith('/' + file));
       if (match) file = match.path;
-      if (file && files.some((f) => f.path === file)) setActiveFile(file);
+      if (file && files.some((f) => f.path === file)) openFile(file);
       if (!Number.isNaN(line)) requestAnimationFrame(() => setTimeout(() => codeRef.current?.gotoLine(line), 80));
     } catch (err: any) {
       // 409: the preview on screen and the SyncTeX on disk are different runs.
@@ -853,7 +885,7 @@ export default function Editor() {
     insertAtCursor,
     refreshFiles: loadFiles,
     refreshProject: loadProject,
-    openFile: (path: string) => { if (files.some((f) => f.path === path)) setActiveFile(path); },
+    openFile: (path: string) => { if (files.some((f) => f.path === path)) openFile(path); },
     compile: doCompile,
     toast,
   }), [id, branch, activeFile, compile.result, layout, insertAtCursor, loadFiles, loadProject, doCompile, toast, files]);
@@ -905,6 +937,7 @@ export default function Editor() {
             }
             await loadFiles();
             loadProject(); // the root designation may have moved with the rename
+            setOpenFiles((cur) => cur.map((p) => (p === activeFile ? to : p)));
             setActiveFile(to);
           }
         },
@@ -912,12 +945,18 @@ export default function Editor() {
       cmds.push({
         id: 'delete-file', group: 'File', title: `Delete ${activeFile}…`, run: async () => {
           if (await dialogs.confirm({ title: `Delete ${activeFile}?`, confirmLabel: 'Delete file', danger: true })) {
-            await api.deleteFile(id, branch, activeFile);
+            const path = activeFile;
+            await api.deleteFile(id, branch, path);
             await loadFiles();
-            setActiveFile(null);
+            setOpenFiles((cur) => cur.filter((p) => p !== path));
+            forgetViewState(id, branch, path);
+            setActiveFile((a) => (a === path ? null : a));
           }
         },
       });
+    }
+    if (openFiles.length) {
+      cmds.push({ id: 'close-tab', group: 'File', title: `Close tab ${activeFile ?? ''}`, run: () => activeFile && closeTab(activeFile) });
     }
     for (const s of [
       { id: 'fig', title: 'Insert figure', text: '\\begin{figure}[htbp]\n  \\centering\n  \\includegraphics[width=0.8\\linewidth]{}\n  \\caption{}\n  \\label{fig:}\n\\end{figure}\n' },
@@ -927,7 +966,7 @@ export default function Editor() {
       cmds.push({ id: `snippet-${s.id}`, group: 'Insert', title: s.title, run: () => insertAtCursor(s.text) });
     }
     for (const f of files.filter((f) => f.type === 'file' && !f.binary)) {
-      cmds.push({ id: `open-${f.path}`, group: 'Open', title: f.path, run: () => setActiveFile(f.path) });
+      cmds.push({ id: `open-${f.path}`, group: 'Open', title: f.path, run: () => openFile(f.path) });
     }
     return cmds;
   }, [files, activeFile, id, branch, auto, spellcheck, doCompile, toggleAuto, jumpToPdf, setEngine, setStopOnFirstError, project?.stopOnFirstError, project?.remote, insertAtCursor, loadFiles, loadProject, toast]);
@@ -1071,7 +1110,7 @@ export default function Editor() {
                 rootFile={project.rootFile}
                 projectId={id}
                 branch={branch}
-                onOpen={setActiveFile}
+                onOpen={openFile}
                 newFileRequest={newFileRequest}
                 onNewFileHandled={() => setNewFileRequest(0)}
                 onCreate={async (path) => {
@@ -1079,9 +1118,9 @@ export default function Editor() {
                     await api.createFile(id, branch, path);
                     await loadFiles();
                     loadProject(); // the first .tex of a rootless project becomes its root
-                    setActiveFile(path);
+                    openFile(path);
                   } catch (err: any) {
-                    if (/already exists/i.test(err?.message)) { toast(`"${path}" already exists`, 'error'); setActiveFile(path); }
+                    if (/already exists/i.test(err?.message)) { toast(`"${path}" already exists`, 'error'); openFile(path); }
                     else toast(`Could not create file: ${err.message}`, 'error');
                   }
                 }}
@@ -1103,8 +1142,11 @@ export default function Editor() {
                     await api.deleteFile(id, branch, path);
                     await loadFiles();
                     loadProject(); // deleting the root re-derives (or unsets) it
-                    // a folder delete takes any open file inside it down too
-                    if (activeFile === path || activeFile?.startsWith(`${path}/`)) setActiveFile(null);
+                    // the delete takes every open file at/under the path down
+                    const keep = openFiles.filter((p) => p !== path && !p.startsWith(`${path}/`));
+                    openFiles.filter((p) => !keep.includes(p)).forEach((p) => forgetViewState(id, branch, p));
+                    setOpenFiles(keep);
+                    if (activeFile === path || activeFile?.startsWith(`${path}/`)) setActiveFile(keep[0] ?? null);
                   } finally {
                     setTimeout(() => { if (localRemoval.current === path) localRemoval.current = null; }, 0);
                   }
@@ -1116,6 +1158,7 @@ export default function Editor() {
                     await loadFiles();
                     loadProject(); // the root designation may have moved with the rename
                     // a folder rename carries any open file inside it along
+                    setOpenFiles((cur) => cur.map((p) => (p === from ? to : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p)));
                     if (activeFile === from) setActiveFile(to);
                     else if (activeFile?.startsWith(`${from}/`)) setActiveFile(to + activeFile.slice(from.length));
                   } catch (err: any) {
@@ -1150,6 +1193,31 @@ export default function Editor() {
         <main className="pane pane--editor" style={{ flex: 1 }}>
           {activeFile ? (
             <>
+              {openFiles.length > 0 && (
+                <div className="etab__bar" role="tablist" aria-label="Open files" data-testid="editor-tabs">
+                  {openFiles.map((p) => (
+                    <div
+                      key={p}
+                      className={`etab ${p === activeFile ? 'etab--active' : ''}`}
+                      role="tab"
+                      aria-selected={p === activeFile}
+                      data-testid={`etab-${p}`}
+                      title={p}
+                      onClick={() => openFile(p)}
+                    >
+                      <span className="etab__label">{p.slice(p.lastIndexOf('/') + 1)}</span>
+                      <button
+                        className="etab__close"
+                        aria-label={`Close ${p}`}
+                        data-testid={`etab-close-${p}`}
+                        onClick={(e) => { e.stopPropagation(); closeTab(p); }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="pane__header">
                 <span className="statusbar__file" data-testid="active-file">{activeFile}</span>
                 {visualEnabled && mode === 'visual' && <FormatToolbar target={codeRef} />}

@@ -24,6 +24,16 @@ import type { Text } from '@codemirror/state';
 
 export type EditorMode = 'source' | 'visual';
 
+/** View state that outlives an unmount, so reopening a file (tab switch)
+ *  lands the cursor and scroll where the user left them. Keyed by docName;
+ *  a closed tab's entry is dropped via forgetViewState. */
+const viewState = new Map<string, { anchor: number; head: number; scrollTop: number }>();
+
+/** A closed tab starts fresh: drop whatever the last visit stashed. */
+export function forgetViewState(projectId: string, branch: string, filePath: string): void {
+  viewState.delete(`${projectId}::${branch}::${filePath}`);
+}
+
 /**
  * Re-anchor a comment by its stored quote when its saved offset has drifted
  * (edits above it made while it wasn't being live-tracked — reload, another
@@ -314,6 +324,11 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
     awareness.on('change', reportUsers);
     reportUsers();
 
+    // The unmount cleanup runs AFTER React detaches the DOM, when
+    // scrollDOM.scrollTop already reads 0 — keep the last live value here.
+    let lastScrollTop = 0;
+    const onScroll = () => { lastScrollTop = view.scrollDOM.scrollTop; };
+
     const view = new EditorView({
       parent: hostRef.current,
       state: EditorState.create({
@@ -388,6 +403,7 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
     });
     viewRef.current = view;
     reconfRef.current = { modeComp, spellComp, deps };
+    view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
 
     syncedRef.current = false;
     const initialStats = () => {
@@ -395,6 +411,23 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
       const goto = pendingGoto.current;
       pendingGoto.current = null;
       if (goto) applyGoto(view, goto.line, goto.flash, goto.onClamped);
+      else {
+        // no explicit jump — put the cursor/scroll back where this file's
+        // last visit left them (a tab switch away stashed them). Deferred
+        // past the sync-applied doc's first layout: scrollTop set before
+        // the doc has height is clamped to 0.
+        const stash = viewState.get(docName);
+        if (stash) {
+          requestAnimationFrame(() => setTimeout(() => {
+            if (viewRef.current !== view) return; // switched away again already
+            const len = view.state.doc.length;
+            try {
+              view.dispatch({ selection: { anchor: Math.min(stash.anchor, len), head: Math.min(stash.head, len) } });
+              view.scrollDOM.scrollTop = stash.scrollTop;
+            } catch { /* offsets stale against a changed doc — start at top */ }
+          }, 60));
+        }
+      }
       cbRef.current.onStats?.({ words: latexWordCount(view.state.doc.toString()), selWords: null });
       // Re-anchor comments against the now-populated doc: a push that arrived
       // before the Yjs sync ran against an empty document.
@@ -405,6 +438,9 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
     provider.on('synced', initialStats);
 
     return () => {
+      const sel = view.state.selection.main;
+      viewState.set(docName, { anchor: sel.anchor, head: sel.head, scrollTop: lastScrollTop });
+      view.scrollDOM.removeEventListener('scroll', onScroll);
       if (statsTimer) clearTimeout(statsTimer);
       if (flashTimer.current) { clearTimeout(flashTimer.current); flashTimer.current = null; }
       pendingGoto.current = null;

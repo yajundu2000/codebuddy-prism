@@ -693,6 +693,58 @@
   min-width: 0;
 }
 
+/* Editor tab bar: one tab per open file. Horizontally scrollable — many
+   tabs shrink-to-fit a while, then scroll rather than wrapping onto the
+   document. Only the active pane is mounted; the rest remount on switch
+   with their cursor/scroll restored. */
+.etab__bar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--hairline);
+  overflow-x: auto;
+  flex: none;
+  scrollbar-width: thin;
+}
+.etab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-s);
+  cursor: pointer;
+  white-space: nowrap;
+  flex: none;
+  user-select: none;
+}
+.etab:hover { background: var(--bg-hover); color: var(--text); }
+.etab--active {
+  background: var(--bg-panel);
+  border-color: var(--hairline);
+  color: var(--text);
+  font-weight: 600;
+  /* sit over the bar's bottom hairline so the active tab reads as open into the editor */
+  margin-bottom: -1px;
+  padding-bottom: 5px;
+}
+.etab__label { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.etab__close {
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--text-m);
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.etab__close:hover { background: var(--bg-active); color: var(--text); }
+
 .sidebar { width: 230px; flex: none; background: var(--bg-inset); }
 .sidebar__tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 6px 0; }
 .sidebar__tab {

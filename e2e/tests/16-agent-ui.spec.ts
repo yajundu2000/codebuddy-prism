@@ -169,7 +169,8 @@ test.describe('agent presence and audit UI', () => {
       await expect(page.getByTestId('agent-review-modal')).toBeVisible();
       await expect(page.getByTestId('agent-review-commit').first()).toContainText('Rewrite the opening line');
       await expect(page.getByTestId('agent-review-modal')).toContainText('AWAY-EDITED-OPENING-LINE');
-      await page.getByRole('button', { name: 'Close' }).click();
+      // scoped to the modal — the tab bar's per-file close buttons also say "Close …"
+      await page.getByTestId('agent-review-modal').getByRole('button', { name: 'Close' }).click();
 
       // The visit was recorded: the next open asks the server the same
       // question and gets nothing back, so no toast is raised.
