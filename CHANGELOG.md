@@ -7,6 +7,11 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Cite: after a GB/T paste (or raw BibTeX) lands in the .bib, the opened
+  file starts with the cursor on the new entry — flashed like a deep link,
+  and a duplicate paste jumps to the existing entry just the same. The
+  plugin host's `openFile` grew an optional `line` argument; the add
+  reference API responses now carry the entry's line.
 - Editor tabs: every file opened this session keeps a tab above the editor;
   clicking switches (only the active pane stays mounted), and switching back
   restores the cursor line and scroll position. Tabs close with × (closing

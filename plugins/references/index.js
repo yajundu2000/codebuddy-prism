@@ -45,7 +45,7 @@ export default {
             if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
             citation = '';
             await aldine.project.refreshFiles();
-            if (body.bibFile) aldine.project.openFile(body.bibFile);
+            if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
             aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key} to ${body.bibFile}`, 'ok');
           } catch (err) {
             aldine.toast(err.message, 'error');

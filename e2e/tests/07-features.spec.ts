@@ -54,6 +54,8 @@ test.describe('v0.2 features', () => {
       await page.getByTestId('gbt-add').click();
       await expect(page.locator('.cm-content')).toContainText('@article{XCQ202637047,', { timeout: 15_000 });
       await expect(page.locator('.cm-content')).toContainText('新传奇');
+      // the cursor lands on the new entry's opener line
+      await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{XCQ202637047,/);
       // BibTeX highlighting is live: token spans carry the highlight style's
       // hashed classes (HighlightStyle paints via stylesheet, not inline style)
       await expect(page.locator('.cm-content .cm-line span[class^="ͼ"]').first()).toBeVisible();
@@ -66,6 +68,8 @@ test.describe('v0.2 features', () => {
       await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
       await page.getByTestId('gbt-add').click();
       await expect(page.locator('.toast').filter({ hasText: 'Already in bibliography' })).toBeVisible();
+      // a duplicate still parks the cursor on the existing entry
+      await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{XCQ202637047,/);
       const entries = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
       expect(entries.filter((e: { key: string }) => e.key === 'XCQ202637047')).toHaveLength(1);
 

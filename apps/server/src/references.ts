@@ -343,8 +343,19 @@ function entryWithSameIdentifier(source: string, entry: string): string | null {
   return null;
 }
 
-/** `created`: the .bib did not exist before this call (folders included). */
-export interface AddedReference { key: string; bibFile: string; duplicate: boolean; created: boolean }
+/** `created`: the .bib did not exist before this call (folders included).
+ *  `line`: 1-based line of the entry's `@type{key,` opener in the final
+ *  content, so the editor can land the cursor on it (new and duplicate
+ *  alike — a duplicate still deserves the jump). */
+export interface AddedReference { key: string; bibFile: string; duplicate: boolean; created: boolean; line?: number }
+
+/** The 1-based line where `@type{key,` starts, or undefined if not found. */
+function entryLine(content: string, key: string): number | undefined {
+  if (!key) return undefined;
+  const m = content.match(new RegExp(`^@\\w+\\{${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')},`, 'm'));
+  if (!m || m.index == null) return undefined;
+  return content.slice(0, m.index).split('\n').length;
+}
 
 /**
  * Look a query up and append the entry to `bibFile` on the branch (created
@@ -380,22 +391,22 @@ async function appendReference(projectId: string, branch: string, bibFile: strin
     // reported so the caller cites that one.
     const key = [...bibKeys(entry)][0] ?? '';
     const present = key && bibKeys(existing ?? '').has(key) ? key : entryWithSameIdentifier(existing ?? '', entry);
-    if (present) return { key: present, bibFile, duplicate: true, created: false, before, after: existing ?? '' };
+    if (present) return { key: present, bibFile, duplicate: true, created: false, before, after: existing ?? '', line: entryLine(existing ?? '', present) };
     const after = (existing ?? '').trimEnd() + '\n\n' + entry.trim() + '\n';
     beforeWrite?.();
     store.writeFile(projectId, branch, bibFile, after);
     refreshBranchDocsFromDisk(projectId, branch, [bibFile]);
     if (!author) scheduleCommit(projectId, branch);
-    return { key, bibFile, duplicate: false, created: existing === null, before, after };
+    return { key, bibFile, duplicate: false, created: existing === null, before, after, line: entryLine(after, key) };
   };
-  if (!author) { const { key, duplicate, created } = append(); return { key, bibFile, duplicate, created }; }
+  if (!author) { const { key, duplicate, created, line } = append(); return { key, bibFile, duplicate, created, line }; }
   return withRepoLock(projectId, async () => {
     flushBranchDocs(projectId, branch);
     await checkpointPathsHeld(projectId, branch, [bibFile]);
     flushBranchDocs(projectId, branch);
-    const { key, duplicate, created, before, after } = append();
+    const { key, duplicate, created, before, after, line } = append();
     if (!duplicate) await commitAgentWrite(projectId, branch, [{ path: bibFile, before, after }], `Add reference ${key || bibFile}`);
-    return { key, bibFile, duplicate, created };
+    return { key, bibFile, duplicate, created, line };
   });
 }
 

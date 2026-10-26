@@ -24,7 +24,7 @@ export interface PluginCtx {
   insertAtCursor(text: string): void;
   refreshFiles(): Promise<unknown>;
   refreshProject(): Promise<unknown>;
-  openFile(path: string): void;
+  openFile(path: string, line?: number): void;
   compile(): void;
   toast(text: string, kind?: 'info' | 'error' | 'ok'): void;
 }
@@ -39,7 +39,7 @@ export interface AldineAPI {
     refreshFiles(): Promise<unknown>;
     refresh(): Promise<unknown>;
     /** Opens a file in the editor pane (a no-op for a path that is not in the tree). */
-    openFile(path: string): void;
+    openFile(path: string, line?: number): void;
   };
   editor: { insertAtCursor(text: string): void };
   compile(): void;
@@ -70,7 +70,7 @@ export function PluginHost({ ctx, onPanels }: Props) {
         lastCompile: () => ctxRef.current.getCompileResult(),
         refreshFiles: () => ctxRef.current.refreshFiles(),
         refresh: () => ctxRef.current.refreshProject(),
-        openFile: (path: string) => ctxRef.current.openFile(path),
+        openFile: (path: string, line?: number) => ctxRef.current.openFile(path, line),
       },
       editor: { insertAtCursor: (t) => ctxRef.current.insertAtCursor(t) },
       compile: () => ctxRef.current.compile(),

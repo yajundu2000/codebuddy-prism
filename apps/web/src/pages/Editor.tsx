@@ -885,7 +885,13 @@ export default function Editor() {
     insertAtCursor,
     refreshFiles: loadFiles,
     refreshProject: loadProject,
-    openFile: (path: string) => { if (files.some((f) => f.path === path)) openFile(path); },
+    openFile: (path: string, line?: number) => {
+      if (!files.some((f) => f.path === path)) return;
+      openFile(path);
+      // land the cursor on a caller-named entry (a pasted reference); the
+      // pane mounts on the next render, so wait it out like jumpToLine does
+      if (line != null && line > 0) requestAnimationFrame(() => setTimeout(() => codeRef.current?.gotoLine(line, { flash: true }), 60));
+    },
     compile: doCompile,
     toast,
   }), [id, branch, activeFile, compile.result, layout, insertAtCursor, loadFiles, loadProject, doCompile, toast, files]);
