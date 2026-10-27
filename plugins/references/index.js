@@ -107,49 +107,55 @@ export default {
 
         const cite = (hit) => addQuery(hit.doi || `openalex:${hit.id}`);
 
+        // The panel skeleton is built once; draw() only mutates the parts
+        // that change. Rebuilding wholesale (replaceChildren) dropped the
+        // focus, caret, and IME composition of whichever field the user was
+        // typing in the moment the debounced search re-rendered.
+        const gbtInput = h('textarea', {
+          class: 'input',
+          placeholder: '[1]张三,李四.题名[J].刊名,2026,(37):47-49.DOI:…\n或 @article{key, title = {…}, …}',
+          style: { width: '100%', height: '88px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 },
+          dataset: { testid: 'gbt-citation-input' },
+          oninput: (e) => { citation = e.target.value; },
+        }, citation);
+        const gbtBtn = h('button', {
+          class: 'btn btn--primary',
+          style: { width: '100%', justifyContent: 'center' },
+          dataset: { testid: 'gbt-add' },
+          onclick: addGbt,
+        }, 'Convert & add');
+        const searchInput = h('textarea', {
+          class: 'input',
+          rows: 1,
+          placeholder: 'Title, author, keywords…',
+          style: { width: '100%', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5 },
+          autocomplete: 'off',
+          name: 'citation-query',
+          dataset: { testid: 'reference-search' },
+          onkeydown: (e) => {
+            // isComposing: the IME's Enter confirms a candidate, not a search
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); runSearch(); }
+          },
+          oninput: (e) => onSearchInput(e.target.value.replace(/\s*\n+\s*/g, ' ')),
+        }, searchTerm);
+        const spinner = h('div', { class: 'spinner', style: { margin: '6px auto', display: 'none' } });
+        const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
+
+        root.replaceChildren(h('div', { class: 'panel-list', dataset: { testid: 'references-panel' }, style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px 6px' } },
+          h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference or a BibTeX entry'),
+          gbtInput,
+          gbtBtn,
+          h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),
+          searchInput,
+          spinner,
+          list,
+        ));
+
         function draw() {
-          const wrap = h('div', { class: 'panel-list', dataset: { testid: 'references-panel' }, style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px 6px' } });
-
-          wrap.append(
-            h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference or a BibTeX entry'),
-            h('textarea', {
-              class: 'input',
-              placeholder: '[1]张三,李四.题名[J].刊名,2026,(37):47-49.DOI:…\n或 @article{key, title = {…}, …}',
-              style: { width: '100%', height: '88px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 },
-              dataset: { testid: 'gbt-citation-input' },
-              oninput: (e) => { citation = e.target.value; },
-            }, citation),
-            h('button', {
-              class: 'btn btn--primary',
-              style: { width: '100%', justifyContent: 'center' },
-              dataset: { testid: 'gbt-add' },
-              disabled: busy ? '' : null,
-              onclick: addGbt,
-            }, busy ? 'Adding…' : 'Convert & add'),
-          );
-
-          // --- search 250M+ papers (OpenAlex) ---
-          wrap.append(
-            h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),
-            // a textarea, not an input: password managers classify a
-            // single-line input as a username field and squeeze the login
-            // email into it; multi-line fields are not login candidates
-            h('textarea', {
-              class: 'input',
-              rows: 1,
-              placeholder: 'Title, author, keywords…',
-              style: { width: '100%', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5 },
-              autocomplete: 'off',
-              name: 'citation-query',
-              dataset: { testid: 'reference-search' },
-              onkeydown: (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runSearch(); }
-              },
-              oninput: (e) => onSearchInput(e.target.value.replace(/\s*\n+\s*/g, ' ')),
-            }, searchTerm),
-          );
-          if (searching) wrap.append(h('div', { class: 'spinner', style: { margin: '6px auto' } }));
-          const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
+          gbtBtn.disabled = busy;
+          gbtBtn.textContent = busy ? 'Adding…' : 'Convert & add';
+          spinner.style.display = searching ? 'block' : 'none';
+          list.replaceChildren();
           for (const hit of results.slice(0, 12)) {
             list.append(h('button', {
               class: 'tree__item',
@@ -163,9 +169,6 @@ export default {
                 [hit.authors, hit.year, hit.venue].filter(Boolean).join(' · ')),
             ));
           }
-          if (results.length) wrap.append(list);
-
-          root.replaceChildren(wrap);
         }
 
         draw();
