@@ -52,6 +52,11 @@ All notable changes to Aldine are documented here. The format follows
   untouched, so every auth flow and testid behaves exactly as before.
 
 ### Changed
+- The Cite search field is a one-row textarea: password managers were
+  classifying the single-line input as a username field and autofilling the
+  login email into it — multi-line fields are not login candidates, so the
+  readonly gate and sweep that papered over this are gone. Enter searches
+  now (Shift+Enter still breaks the line, folds into a space).
 - Opening the Cite panel no longer switches the editor to the first .bib —
   the panel leaves you in your prose; the .bib opens (at the entry, cursor
   flashed) only when a paste or a search hit actually adds a reference.

@@ -131,23 +131,22 @@ export default {
           // --- search 250M+ papers (OpenAlex) ---
           wrap.append(
             h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),
-            h('input', {
+            // a textarea, not an input: password managers classify a
+            // single-line input as a username field and squeeze the login
+            // email into it; multi-line fields are not login candidates
+            h('textarea', {
               class: 'input',
-              type: 'search',
+              rows: 1,
               placeholder: 'Title, author, keywords…',
-              style: { width: '100%' },
+              style: { width: '100%', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5 },
               autocomplete: 'off',
               name: 'citation-query',
               dataset: { testid: 'reference-search' },
-              // the password manager insists on autofilling the login email
-              // here (autocomplete=off alone does not stop it): mount the
-              // field readonly — autofill skips readonly fields — then unlock
-              // it below once the fill window has passed
-              readonly: searchTerm ? null : '',
-              value: searchTerm || null,
-              onfocus: (e) => { e.target.readOnly = false; },
-              oninput: (e) => onSearchInput(e.target.value),
-            }),
+              onkeydown: (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runSearch(); }
+              },
+              oninput: (e) => onSearchInput(e.target.value.replace(/\s*\n+\s*/g, ' ')),
+            }, searchTerm),
           );
           if (searching) wrap.append(h('div', { class: 'spinner', style: { margin: '6px auto' } }));
           const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
@@ -170,18 +169,6 @@ export default {
         }
 
         draw();
-        // Second line of defence past the readonly gate: once the browser's
-        // fill window has passed, unlock the field and clear anything
-        // email-shaped a password manager squeezed in anyway.
-        setTimeout(() => {
-          const el = root.querySelector('[data-testid="reference-search"]');
-          if (!el) return;
-          el.readOnly = false;
-          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) {
-            el.value = '';
-            onSearchInput('');
-          }
-        }, 1200);
       },
     });
   },
