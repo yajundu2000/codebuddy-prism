@@ -52,6 +52,9 @@ All notable changes to Aldine are documented here. The format follows
   untouched, so every auth flow and testid behaves exactly as before.
 
 ### Changed
+- Opening the Cite panel no longer switches the editor to the first .bib —
+  the panel leaves you in your prose; the .bib opens (at the entry, cursor
+  flashed) only when a paste or a search hit actually adds a reference.
 - The Cite panel carries the OpenAlex search again — below the GB/T paste
   box: type a title/author/keyword, click a result, and the entry lands in
   the bibliography with `\cite{key}` inserted at the cursor; the .bib then

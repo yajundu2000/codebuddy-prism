@@ -17,14 +17,9 @@ export default {
     aldine.ui.registerSidebarPanel({
       id: 'references',
       title: 'Cite',
-      onShow() {
-        // The bibliography is the thing this panel works on: open the first
-        // non-Zotero .bib in the editor so a paste lands where the user sees it.
-        aldine.project.refreshFiles().then((files) => {
-          const bib = (Array.isArray(files) ? files : []).find((f) => f.type === 'file' && f.path.endsWith('.bib') && !f.path.endsWith('zotero.bib'));
-          if (bib) aldine.project.openFile(bib.path);
-        }).catch(() => {});
-      },
+      // No onShow file switch: opening the panel must not pull the editor off
+      // the prose the user is writing. The .bib opens on demand — when a
+      // paste or a search hit lands an entry, at that entry's line.
       render(root) {
         let citation = '';
         let busy = false;

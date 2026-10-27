@@ -45,9 +45,9 @@ test.describe('v0.2 features', () => {
       const tab = page.getByTestId('tab-plugin:references');
       await expect(tab).toBeVisible({ timeout: 15_000 });
       await tab.click();
-      // requirement 1: the tab opens the project's .bib in the editor
-      await expect(page.getByTestId('active-file')).toHaveText('refs.bib', { timeout: 15_000 });
-      await expect(page.locator('.cm-content')).toContainText('seed2020');
+      // opening the panel leaves the editor where it was (no .bib auto-open);
+      // the .bib appears only when the paste lands an entry, at that entry
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex');
 
       // requirements 2-4: paste, convert, the entry lands highlighted in the .bib
       await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
