@@ -235,6 +235,40 @@ test.describe('word count', () => {
   });
 });
 
+test.describe('cite-from-search (OpenAlex)', () => {
+  test('search papers, click a result, insert the cite', async ({ page, request }) => {
+    const id = await createProject(request, 'Search Cite');
+    try {
+      await openProject(page, id);
+      await page.getByTestId('tab-plugin:references').click();
+      await page.getByTestId('reference-search').fill('mock searchable paper');
+      // results render from the mock OpenAlex
+      await expect(page.getByTestId('search-hit-W111')).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('references-panel')).toContainText('A Searchable Mock Paper');
+      await page.getByTestId('search-hit-W111').click();
+      // a \cite is inserted and the entry lands in the .bib
+      await expect(page.locator('.cm-content')).toContainText('\\cite{', { timeout: 15_000 });
+      const bib = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
+      expect(bib.length).toBeGreaterThan(1);
+    } finally {
+      await cleanup(request, id);
+    }
+  });
+
+  test('a DOI-less result synthesizes a bib entry from metadata', async ({ page, request }) => {
+    const id = await createProject(request, 'Search Cite 2');
+    try {
+      await openProject(page, id);
+      await page.getByTestId('tab-plugin:references').click();
+      await page.getByTestId('reference-search').fill('doi-less mock');
+      await page.getByTestId('search-hit-W222').click();
+      await expect(page.locator('.cm-content')).toContainText('\\cite{smith2019}', { timeout: 15_000 });
+    } finally {
+      await cleanup(request, id);
+    }
+  });
+});
+
 test.describe('misc editor features', () => {
   test('Layout menu toggles the PDF and sidebar panes and persists', async ({ page, request }) => {
     const id = await createProject(request, 'Layout Menu');

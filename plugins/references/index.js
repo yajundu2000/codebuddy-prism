@@ -28,6 +28,34 @@ export default {
       render(root) {
         let citation = '';
         let busy = false;
+        let searchTerm = '';
+        let results = [];
+        let searching = false;
+        let searchSeq = 0;
+
+        // OpenAlex search → pick a hit → the server fetches its BibTeX and
+        // appends it; the \cite lands at the cursor of the open file.
+        const addQuery = async (q) => {
+          if (!q || busy) return;
+          busy = true; draw();
+          try {
+            const res = await aldine.fetch(`/api/projects/${aldine.project.id}/references/add`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ query: q, branch: aldine.project.branch }),
+            });
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+            await aldine.project.refreshFiles();
+            if (body.key) {
+              aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
+              aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} and inserted citation`, 'ok');
+            }
+          } catch (err) {
+            aldine.toast(`Lookup failed: ${err.message}`, 'error');
+          }
+          busy = false; draw();
+        };
 
         // GB/T 7714-2025 paste → BibTeX: offline parse, appended to the
         // project's bibliography (the server resolves which .bib that is).
@@ -53,6 +81,29 @@ export default {
           busy = false; draw();
         };
 
+        let searchTimer = null;
+        const runSearch = () => {
+          const q = searchTerm.trim();
+          if (q.length < 3) { results = []; searching = false; draw(); return; }
+          const seq = ++searchSeq;
+          searching = true; draw();
+          aldine.fetch(`/api/references/search?q=${encodeURIComponent(q)}`)
+            .then((r) => r.json())
+            .then((body) => {
+              if (seq !== searchSeq) return;
+              results = Array.isArray(body) ? body : [];
+              searching = false; draw();
+            })
+            .catch(() => { if (seq === searchSeq) { searching = false; draw(); } });
+        };
+        const onSearchInput = (v) => {
+          searchTerm = v;
+          if (searchTimer) clearTimeout(searchTimer);
+          searchTimer = setTimeout(runSearch, 350);
+        };
+
+        const cite = (hit) => addQuery(hit.doi || `openalex:${hit.id}`);
+
         function draw() {
           const wrap = h('div', { class: 'panel-list', dataset: { testid: 'references-panel' }, style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px 6px' } });
 
@@ -73,6 +124,35 @@ export default {
               onclick: addGbt,
             }, busy ? 'Adding…' : 'Convert & add'),
           );
+
+          // --- search 250M+ papers (OpenAlex) ---
+          wrap.append(
+            h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),
+            h('input', {
+              class: 'input',
+              placeholder: 'Title, author, keywords…',
+              style: { width: '100%' },
+              dataset: { testid: 'reference-search' },
+              value: searchTerm,
+              oninput: (e) => onSearchInput(e.target.value),
+            }),
+          );
+          if (searching) wrap.append(h('div', { class: 'spinner', style: { margin: '6px auto' } }));
+          const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
+          for (const hit of results.slice(0, 12)) {
+            list.append(h('button', {
+              class: 'tree__item',
+              style: { height: 'auto', padding: '6px 8px', display: 'block' },
+              dataset: { testid: `search-hit-${hit.id}` },
+              title: `Insert \\cite for “${hit.title}”`,
+              onclick: () => cite(hit),
+            },
+              h('div', { style: { fontWeight: '600', fontSize: '12.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, hit.title),
+              h('div', { style: { color: 'var(--text-2)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+                [hit.authors, hit.year, hit.venue].filter(Boolean).join(' · ')),
+            ));
+          }
+          if (results.length) wrap.append(list);
 
           root.replaceChildren(wrap);
         }

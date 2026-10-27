@@ -52,6 +52,10 @@ All notable changes to Aldine are documented here. The format follows
   untouched, so every auth flow and testid behaves exactly as before.
 
 ### Changed
+- The Cite panel carries the OpenAlex search again — below the GB/T paste
+  box: type a title/author/keyword, click a result, and the entry lands in
+  the bibliography with `\cite{key}` inserted at the cursor (the routes had
+  stayed for the AI tools; the two search e2e tests are restored with it).
 - The About dialog's source offer points at a same-site bundle
   (`GET /source-code.tar.gz`, packed into the image by deploy.sh) instead of
   the GitHub repository: an instance now satisfies AGPL §13 from itself, and
