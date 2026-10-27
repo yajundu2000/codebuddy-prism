@@ -48,10 +48,16 @@ export default {
             if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
             await aldine.project.refreshFiles();
             if (body.key) {
-              aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
+              // \cite belongs in the prose file at the cursor — NOT in the .bib
+              // itself (onShow may have made the .bib the active file)
+              if (body.bibFile && aldine.project.activeFile() === body.bibFile) {
+                aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key}; type \\cite{${body.key}} where you cite it`, 'ok');
+              } else {
+                aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
+                aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} and inserted citation`, 'ok');
+              }
               // show the entry where it landed, same as a GB/T paste
               if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
-              aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} and inserted citation`, 'ok');
             }
           } catch (err) {
             aldine.toast(`Lookup failed: ${err.message}`, 'error');

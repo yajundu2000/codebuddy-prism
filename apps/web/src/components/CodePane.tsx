@@ -201,6 +201,10 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
   const lastCommentRanges = useRef<CommentRange[]>([]);
   const syncedRef = useRef(false);
   const pendingGoto = useRef<{ line: number; flash: boolean; onClamped?: (lines: number) => void } | null>(null);
+  // An explicit goto (error row, deep link, a reference just added) must beat
+  // the tab-switch stash restore when both are pending around a remount —
+  // bumping this generation cancels a restore that hasn't fired yet.
+  const gotoGenRef = useRef(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyGoto = (view: EditorView, line: number, flash: boolean, onClamped?: (lines: number) => void) => {
@@ -222,6 +226,7 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
   useImperativeHandle(ref, () => ({
     gotoLine(line: number, opts?: { flash?: boolean; onClamped?: (lines: number) => void }) {
       const view = viewRef.current;
+      gotoGenRef.current++;
       // Before the view exists (handle is live from the first commit, the
       // view from the mount effect) or before the doc has synced: queue it.
       if (!view || !syncedRef.current) { pendingGoto.current = { line, flash: !!opts?.flash, onClamped: opts?.onClamped }; return; }
@@ -418,8 +423,10 @@ const CodePane = forwardRef<CodePaneHandle, Props>(function CodePane({ projectId
         // the doc has height is clamped to 0.
         const stash = viewState.get(docName);
         if (stash) {
+          const gen = gotoGenRef.current;
           requestAnimationFrame(() => setTimeout(() => {
-            if (viewRef.current !== view) return; // switched away again already
+            // switched away again already, or an explicit goto arrived since
+            if (viewRef.current !== view || gotoGenRef.current !== gen) return;
             const len = view.state.doc.length;
             try {
               view.dispatch({ selection: { anchor: Math.min(stash.anchor, len), head: Math.min(stash.head, len) } });

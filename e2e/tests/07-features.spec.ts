@@ -245,11 +245,14 @@ test.describe('cite-from-search (OpenAlex)', () => {
       // results render from the mock OpenAlex
       await expect(page.getByTestId('search-hit-W111')).toBeVisible({ timeout: 10_000 });
       await expect(page.getByTestId('references-panel')).toContainText('A Searchable Mock Paper');
+      // back to the prose file, the way a writer uses this mid-draft
+      await page.getByTestId("etab-main.tex").click();
       await page.getByTestId('search-hit-W111').click();
-      // a \cite is inserted and the entry lands in the .bib
-      await expect(page.locator('.cm-content')).toContainText('\\cite{', { timeout: 15_000 });
-      // …and the .bib opens with the cursor on the new entry, like a GB/T paste
+      // the \cite went into the prose file at the cursor
       await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 15_000 });
+      const prose = await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text();
+      expect(prose).toContain('\\cite{doe2020}');
+      // …and the .bib opens with the cursor on the new entry, like a GB/T paste
       await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{doe2020,/);
       const bib = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
       expect(bib.length).toBeGreaterThan(1);
@@ -264,8 +267,12 @@ test.describe('cite-from-search (OpenAlex)', () => {
       await openProject(page, id);
       await page.getByTestId('tab-plugin:references').click();
       await page.getByTestId('reference-search').fill('doi-less mock');
+      await page.getByTestId("etab-main.tex").click();
       await page.getByTestId('search-hit-W222').click();
-      await expect(page.locator('.cm-content')).toContainText('\\cite{smith2019}', { timeout: 15_000 });
+      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 15_000 });
+      await expect(page.locator('.cm-activeLine')).toHaveText(/smith2019/);
+      const prose = await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text();
+      expect(prose).toContain('\\cite{smith2019}');
     } finally {
       await cleanup(request, id);
     }
