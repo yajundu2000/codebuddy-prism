@@ -133,10 +133,14 @@ export default {
             h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),
             h('input', {
               class: 'input',
+              type: 'search',
               placeholder: 'Title, author, keywords…',
               style: { width: '100%' },
+              autocomplete: 'off',
               dataset: { testid: 'reference-search' },
-              value: searchTerm,
+              // no value attribute while empty — a bare text input invites the
+              // password manager to autofill the login email into it
+              value: searchTerm || null,
               oninput: (e) => onSearchInput(e.target.value),
             }),
           );
