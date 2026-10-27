@@ -82,3 +82,19 @@ test.describe('source offer', () => {
     await expect(about).not.toContainText('github.com');
   });
 });
+
+test.describe('user manual', () => {
+  test('the home footer links the manual, and the page serves rendered', async ({ page }) => {
+    await page.goto('/');
+    const link = page.getByTestId('open-manual');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', /manual\.html$/);
+    // the manual itself: same-site, self-contained, TOC anchors resolve
+    const res = await page.goto('/manual.html');
+    expect(res?.status()).toBe(200);
+    await expect(page).toHaveTitle(/用户手册/);
+    await expect(page.locator('[id="13-常见问题"]')).toBeVisible();
+    // no external resources — the page works on an air-gapped deployment
+    await expect(page.locator('link[rel=stylesheet], script[src]')).toHaveCount(0);
+  });
+});

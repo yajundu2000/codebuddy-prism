@@ -38,6 +38,8 @@ test.describe('auth', () => {
     // the filing line mirrors the wenzao.site footer (ICP + 公安 with badge)
     await expect(page.getByTestId('landing-beian')).toContainText('粤ICP备2026116494号-1');
     await expect(page.getByTestId('landing-beian')).toContainText('粤公网安备44011402001422号');
+    // the manual is one click from the signed-out page too
+    await expect(page.getByTestId('landing-footer').getByText('用户手册')).toHaveAttribute('href', /manual\.html$/);
   });
 
   test('register, create a project, sign out, sign back in — project persists', async ({ page }) => {

@@ -7,6 +7,10 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The user manual ships as a page: `GET /manual.html` (self-contained,
+  dark-world styled, generated from the in-repo
+  `TeX写作智能体用户手册.md`), linked from the landing footer and the
+  signed-in home footer.
 - Cite: after a GB/T paste (or raw BibTeX) lands in the .bib, the opened
   file starts with the cursor on the new entry — flashed like a deep link,
   and a duplicate paste jumps to the existing entry just the same. The

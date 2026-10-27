@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<!-- Regenerate: /home/david/anaconda3/bin/pandoc -f markdown_github -t html TeX写作智能体用户手册.md,
+     then re-apply the GitHub-slug id pass (see repo history) into this wrapper. Source of truth: TeX写作智能体用户手册.md -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeX写作智能体 · 用户手册</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: #12141c; color: #f4f5f9;
+  font: 16px/1.75 "Inter Variable", -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: #8c7cf6; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  background: rgba(44,44,48,.82); backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.topbar-inner {
+  max-width: 48rem; margin: 0 auto; padding: 12px 24px;
+  display: flex; align-items: center; gap: 14px;
+}
+.topbar a.back { color: #9ca0ab; font-size: 14px; }
+.topbar a.back:hover { color: #f4f5f9; text-decoration: none; }
+.topbar .title { font-weight: 600; font-size: 14px; color: #9ca0ab; letter-spacing: .02em; }
+main { max-width: 48rem; margin: 0 auto; padding: 40px 24px 96px; }
+h1 { font-size: 1.9rem; line-height: 1.3; letter-spacing: -.01em; margin: 0 0 1.2em; }
+h2 { font-size: 1.4rem; margin-top: 2.6em; margin-bottom: .8em; letter-spacing: -.01em;
+     border-bottom: 1px solid rgba(255,255,255,.1); padding-bottom: .35em; scroll-margin-top: 64px; }
+h3 { font-size: 1.12rem; margin-top: 2em; margin-bottom: .6em; scroll-margin-top: 64px; }
+p, li { color: #d6d8e0; }
+strong { color: #f4f5f9; }
+code { font: .9em ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+       background: rgba(140,124,246,.14); color: #c9c2ff; padding: 2px 6px; border-radius: 5px; }
+blockquote {
+  margin: 1.2em 0; padding: .4em 1.1em; border-left: 3px solid rgba(140,124,246,.5);
+  background: rgba(140,124,246,.08); border-radius: 0 8px 8px 0; color: #b9bcca;
+}
+blockquote p { margin: .4em 0; color: #b9bcca; }
+table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: .95em; display: block; overflow-x: auto; }
+th, td { border: 1px solid rgba(255,255,255,.12); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: #1a1c24; color: #f4f5f9; font-weight: 600; white-space: nowrap; }
+td { color: #d6d8e0; }
+ol, ul { padding-left: 1.6em; }
+li { margin: .3em 0; }
+hr { border: none; border-top: 1px solid rgba(255,255,255,.1); margin: 2.5em 0; }
+em { color: #9ca0ab; }
+div[style*="page-break"] { display: none; }
+@media (max-width: 640px) { main { padding: 24px 16px 72px; } h1 { font-size: 1.5rem; } }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <a class="back" href="/">← 返回</a>
+  <span class="title">TeX写作智能体 · 用户手册</span>
+</div></header>
+<main>
+<h1 id="tex写作智能体--用户手册" id="tex-">TeX写作智能体 <br> 用户手册</h1>
+<table>
+<thead>
+<tr class="header">
+<th align="left">项</th>
+<th align="left">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">系统地址</td>
+<td align="left"><a href="https://tex.wenzao.site/" class="uri">https://tex.wenzao.site/</a></td>
+</tr>
+<tr class="even">
+<td align="left">适用对象</td>
+<td align="left">高校学生、导师、课题组（学位论文 / 课程报告 / <br>期刊投稿写作）</td>
+</tr>
+<tr class="odd">
+<td align="left">使用方式</td>
+<td align="left">现代桌面浏览器（Chrome / Edge / Firefox）<br>直接访问，无需安装任何软件</td>
+</tr>
+<tr class="even">
+<td align="left">文档版本</td>
+<td align="left">v1.0（2026-10-26）</td>
+</tr>
+</tbody>
+</table>
+<p>TeX写作智能体是一个 AI 原生的协作 LaTeX 写作平台：实时协同、git 分支、导师批注、<br />
+文献引用、编译预览与 AI 写作助手整合在同一个浏览器页面。</p>
+<hr />
+<h2 id="目录">目录</h2>
+<ol>
+<li><a href="#1-注册与登录">注册与登录</a></li>
+<li><a href="#2-快速开始建立第一个项目">快速开始：建立第一个项目</a></li>
+<li><a href="#3-首页与项目管理">首页与项目管理</a></li>
+<li><a href="#4-files-文件面板">Files 文件面板</a></li>
+<li><a href="#5-编辑器与文档标签">编辑器与文档标签</a></li>
+<li><a href="#6-编译与-pdf-预览">编译与 PDF 预览</a></li>
+<li><a href="#7-文献引用cite">文献引用（Cite）</a></li>
+<li><a href="#8-评审批注review">评审批注（Review）</a></li>
+<li><a href="#9-ai-写作助手assistant">AI 写作助手（Assistant）</a></li>
+<li><a href="#10-版本管理与分支">版本管理与分支</a></li>
+<li><a href="#11-远程仓库同步gitee">远程仓库同步（Gitee）</a></li>
+<li><a href="#12-命令面板与快捷键">命令面板与快捷键</a></li>
+<li><a href="#13-常见问题">常见问题</a></li>
+</ol>
+<h2 id="section" id="section"><div style="page-break-after: always;"></div></h2>
+<h2 id="1-注册与登录">1. 注册与登录</h2>
+<p><strong>注册（自助，注册即用）</strong></p>
+<ol>
+<li>打开 <a href="https://tex.wenzao.site/" class="uri">https://tex.wenzao.site/</a> ，页面右侧即登录卡。</li>
+<li>点击登录卡下方的 <strong>Need an account? Sign up</strong> 切换到注册模式。</li>
+<li>填写：姓名（可填昵称）、邮箱、密码（至少 8 位）。</li>
+<li>点击 <strong>Create account</strong>，注册成功自动进入首页。</li>
+</ol>
+<p><strong>登录 / 找回密码</strong></p>
+<ul>
+<li>已有账号：在登录卡输入邮箱、密码，点 <strong>Sign in</strong>。</li>
+<li>忘记密码：点登录卡上的 <strong>Forgot password?</strong>，按提示重置。</li>
+</ul>
+<blockquote>
+<p>提示：姓名会显示在协同光标、在线名单与批注署名中，建议填写真实姓名方便合作者识别。</p>
+</blockquote>
+<div style="page-break-after: always;"></div>
+<h2 id="2-快速开始建立第一个项目">2. 快速开始：建立第一个项目</h2>
+<p>快速开始提供两种创建方式：<strong>AI 辅助创建</strong>（一句话让 AI 搭好整个项目骨架）与<br />
+<strong>手动创建</strong>（从模板起步自己写）。</p>
+<h3 id="21-ai-辅助创建" id="ai-">2.1 AI 辅助创建</h3>
+<ol>
+<li>首页点 <strong>New project</strong>，在弹窗中输入项目名 <strong>FirstProject</strong>，模板选择<br />
+<strong>Blank</strong>（空白项目），创建并打开。</li>
+<li>在打开的项目编辑界面，点击左侧 <strong>Assistant</strong> 面板。</li>
+<li>在对话框中输入：</li>
+</ol>
+<blockquote>
+<p>生成一个多文件 LaTeX 文档项目，要求包括测试用的文献库refs.bib。</p>
+</blockquote>
+<ol>
+<li>等待 1~5 分钟（视模型负载而定）。过程中可在对话里看到 AI 的实际操作：<br />
+查看项目结构 → 逐批写入主文件、章节文件与 <code>refs.bib</code> → 试编译自查；<br />
+Files 面板会同步出现新文件（<code>main.tex</code>、<code>sections/</code>、<code>refs.bib</code> 等）。</li>
+<li>AI 每一轮文件改动都会弹出 <strong>diff 审查框</strong>：逐项核对后点 <strong>Keep</strong> 保留<br />
+（不需要的改 <strong>Undo</strong> 撤销）。完成后点右上角 <strong>Typeset</strong> 编译出 PDF——<br />
+一个多文件论文项目就绪。</li>
+</ol>
+<blockquote>
+<p>AI 创建过程同样走版本记录：任何一步不满意，都可在 History 面板回滚（见第 9、10 节）。</p>
+</blockquote>
+<h3 id="22-手动创建">2.2 手动创建</h3>
+<ol>
+<li><strong>新建项目</strong>：首页点 <strong>New project</strong>，选择一个模板（如 Article），输入项目名。</li>
+<li><strong>开始写作</strong>：项目打开后，左侧 Files 面板点开 <code>main.tex</code>，直接输入内容——<br />
+多人可同时编辑，彼此光标实时可见。</li>
+<li><strong>编译</strong>：点右上角 <strong>Typeset</strong> 按钮（或 <code>Ctrl/⌘ + S</code>）。首次编译约需几十秒，<br />
+之后是增量编译，通常 2 秒左右出稿。</li>
+<li><strong>看 PDF</strong>：右侧预览窗格即显示编译结果；改完再按 <code>Ctrl/⌘ + S</code> 即时刷新。</li>
+<li><strong>导出</strong>：PDF 预览窗格自带下载，可随时导出 PDF 文件。</li>
+</ol>
+<div style="page-break-after: always;"></div>
+<h2 id="3-首页与项目管理">3. 首页与项目管理</h2>
+<p>登录后进入个人首页，这里列出你的全部项目（最近打开的排最前）。</p>
+<p><strong>新建项目</strong></p>
+<ul>
+<li>点 <strong>New project</strong> → 选择模板：</li>
+<li>内置模板：Article（文章）、Report（报告）、Beamer（幻灯）等；</li>
+<li>期刊/会议样式包：NeurIPS、ICML、CVPR、ACL、IEEE 等主流 venue，<br />
+选定后项目自动套用该样式。</li>
+</ul>
+<p><strong>导入已有工作</strong></p>
+<ul>
+<li><strong>Import ZIP</strong>：上传 zip 包即可成项目——直接支持 Overleaf 导出的项目包，<br />
+原目录结构原样保留。</li>
+<li><strong>从 Gitee 导入</strong>：已连接 Gitee 的用户可在导入区直接粘贴仓库地址<br />
+（如 <code>https://gitee.com/用户名/仓库名.git</code>）一键导入。</li>
+</ul>
+<p><strong>删除与恢复</strong></p>
+<ul>
+<li>项目卡片右上角删除按钮会先弹确认框：删除只是移入<strong>回收站（trash）</strong>，<br />
+保留 <strong>30 天</strong>，期间可从首页回收站入口恢复。</li>
+<li>需要彻底清除时，在回收站中永久删除。</li>
+</ul>
+<div style="page-break-after: always;"></div>
+<h2 id="4-files-文件面板" id="files-">4. Files 文件面板</h2>
+<p>编辑器左侧即 Files 面板，是项目的文件树。</p>
+<p><strong>新建 / 上传</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">按钮</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><strong>+ New file</strong></td>
+<td align="left">新建文件；首个 <code>.tex</code> 会自动成为编译主文件</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>+ New folder</strong></td>
+<td align="left">新建文件夹；名字含 <code>/</code> 可一次嵌套创建（如 <code>chapters/figs</code>）</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>↑ Upload</strong></td>
+<td align="left">上传本地文件（单文件 ≤ 10 MB）；同名会先询问是否替换</td>
+</tr>
+</tbody>
+</table>
+<p><strong>视图切换（Source / All）</strong></p>
+<p>面板默认只显示 <strong>LaTeX 源文件与图片</strong>（Source 视图），让文件树干净聚焦；<br />
+点 <strong>☰ All</strong> 切换到全部文件。新创建的空文件夹在 Source 视图下也直接可见。</p>
+<p><strong>移动文件：直接拖拽</strong></p>
+<ul>
+<li>把文件/文件夹拖到<strong>另一个文件夹</strong>上 → 移入该文件夹；</li>
+<li>拖到<strong>某个文件</strong>上 → 移到那个文件所在目录；</li>
+<li>拖到面板<strong>空白处</strong> → 移回项目根目录。</li>
+<li>目标位置已有同名文件时会<strong>拒绝并提示</strong>，绝不静默覆盖；把文件夹拖进它自己的<br />
+子文件夹是无效操作。</li>
+</ul>
+<p><strong>右键菜单</strong></p>
+<ul>
+<li>文件：<strong>Set as main document</strong>（设为编译主文件）、<strong>Rename…</strong>（改名/移动，<br />
+路径里写目录即移动）、<strong>Delete</strong>；</li>
+<li>文件夹：<strong>Rename…</strong>（整个文件夹连同内容改路径）、<strong>Delete</strong>（确认框会提示<br />
+文件夹内全部内容一并删除）。</li>
+</ul>
+<div style="page-break-after: always;"></div>
+<h2 id="5-编辑器与文档标签">5. 编辑器与文档标签</h2>
+<p><strong>文档标签</strong>：每打开一个文件，编辑器顶部就多一个标签——</p>
+<ul>
+<li>点标签切换文档；<strong>切换回来时，光标位置和滚动位置原样保留</strong>；</li>
+<li>标签右侧 <strong>×</strong> 关闭该文档；关掉当前标签会自动切到相邻标签；</li>
+<li>命令面板（<code>Ctrl/⌘ + K</code>）里的 <strong>Close tab</strong> 也能关闭当前文档。</li>
+</ul>
+<p><strong>实时协同</strong></p>
+<ul>
+<li>同一项目可多人同时编辑，所有人光标与选区实时可见（颜色区分）；</li>
+<li>右上角在线名单（Presence）显示当前在场的每个人。</li>
+</ul>
+<p><strong>源码 / 视觉模式</strong>：工具栏上的 <strong>Source / Visual</strong> 切换。视觉模式提供所见即所得的<br />
+公式与表格编辑；两种模式共享同一份源码，随时互切不丢内容。</p>
+<div style="page-break-after: always;"></div>
+<h2 id="6-编译与-pdf-预览" id="-pdf-">6. 编译与 PDF 预览</h2>
+<table style="width:11%;">
+<colgroup>
+<col width="5%" />
+<col width="5%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">操作</th>
+<th align="left">做法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">编译</td>
+<td align="left"><strong>Typeset</strong> 按钮或 <code>Ctrl/⌘ + S</code>；自动保存 + 自动增量编译</td>
+</tr>
+<tr class="even">
+<td align="left">引擎</td>
+<td align="left">项目设置（Settings）中选择 <strong>pdf / xelatex / lualatex</strong>；<strong>中文项目请用 xelatex</strong>（默认已内置中文字体环境，开箱即用）</td>
+</tr>
+<tr class="odd">
+<td align="left">看错误</td>
+<td align="left">编译出错时编辑器下方的<strong>错误面板</strong>会展开：错误带文件名与行号，<strong>点击一行直接跳到源码对应位置</strong></td>
+</tr>
+<tr class="even">
+<td align="left">源码 → PDF</td>
+<td align="left">光标放在某行，点 <strong>Jump to PDF</strong>（<code>Ctrl/⌘ + J</code>），PDF 滚动到对应位置</td>
+</tr>
+<tr class="odd">
+<td align="left">PDF → 源码</td>
+<td align="left">在 PDF 预览中按住点击某处，编辑器自动打开对应源文件并定位到行</td>
+</tr>
+</tbody>
+</table>
+<p>中文论文模板（如各高校 LaTeX 模板）上传后选 <strong>xelatex</strong> 引擎即可直接编译；<br />
+平台编译环境内置 TeX Live 全量宏包与中文字体。</p>
+<div style="page-break-after: always;"></div>
+<h2 id="7-文献引用cite" id="cite">7. 文献引用（Cite）</h2>
+<p>左侧 <strong>Cite</strong> 面板把中文文献入库变成一次粘贴。</p>
+<p><strong>粘贴 GB/T 7714 文献（推荐流程）</strong></p>
+<ol>
+<li>在知网等数据库复制文献条目，格式形如：<br />
+<code>[1]张三,李四.题名[J].刊名,2026,(37):47-49.DOI:…</code></li>
+<li>粘贴进 Cite 面板的输入框，点 <strong>Convert &amp; add</strong>。</li>
+<li>条目自动转为 BibTeX 写入项目的 <code>.bib</code> 文件：<strong>bib 文件自动打开，<br />
+光标直接停在新入库的文献上</strong>；重复粘贴同一篇会提示已存在（不重复入库）。</li>
+</ol>
+<p><strong>直接粘贴 BibTeX</strong>：输入框也接受以 <code>@</code> 开头的原始 BibTeX 条目，同样入库。</p>
+<p><strong>Zotero 用户</strong>：左侧 <strong>Zotero</strong> 面板可把整个 Zotero 文献库（或某个文件夹）<br />
+同步为项目的 <code>.bib</code>，之后在 Zotero 里增删文献再同步即可。</p>
+<p><strong>正文引用</strong>：输入 <code>\cite{</code> 会弹出文献键补全；引用键由条目自动生成<br />
+（中文文献取拼音首字母+年卷页），无需手工编号。</p>
+<div style="page-break-after: always;"></div>
+<h2 id="8-评审批注review" id="review">8. 评审批注（Review）</h2>
+<p>导师与学生同页对话，意见不散落在邮件里。</p>
+<ol>
+<li>选中正文任意文字，点工具栏 <strong>Comment</strong>（或评论按钮）留下批注；</li>
+<li>批注锚定在原文上，讨论线程可<strong>解决 / 重开</strong>，全程留痕；</li>
+<li>批注可附带<strong>建议修改</strong>：作者在批注里一键<strong>接受</strong>，建议文本直接落入正文。</li>
+<li>左侧 <strong>Review</strong> 面板列出全部批注线程，点击跳到对应位置。</li>
+</ol>
+<div style="page-break-after: always;"></div>
+<h2 id="9-ai-写作助手assistant" id="ai-assistant">9. AI 写作助手（Assistant）</h2>
+<p>左侧 <strong>Assistant</strong> 面板是与 AI 的对话窗口。它不只是&quot;给建议&quot;——<strong>它会直接动手</strong>。</p>
+<p><strong>能做什么</strong></p>
+<ul>
+<li>起草章节、润色段落、中英翻译、结构化排版；</li>
+<li>直接读项目文件、修改稿件、插入引文、跑编译、提交版本。</li>
+</ul>
+<p><strong>改稿如何审查（核心机制）</strong></p>
+<ul>
+<li>AI 每一轮改动都会弹出 <strong>diff 审查框</strong>：红绿逐行对照；</li>
+<li>你逐行核对后，<strong>Keep（保留）</strong> 或 <strong>Undo（撤销）</strong> 一键定夺；</li>
+<li>保留的改动成为一条独立版本记录，不满意随时整体回滚（见下一节）。</li>
+<li>对话会话保留在项目中，可随时回看或删除。</li>
+</ul>
+<blockquote>
+<p>原则：AI 的每一次落笔都看得见、审得着、退得回——成稿始终由作者掌控。</p>
+</blockquote>
+<div style="page-break-after: always;"></div>
+<h2 id="10-版本管理与分支">10. 版本管理与分支</h2>
+<p><strong>每个论文项目天然是一个 git 仓库</strong>（无需会任何 git 命令）。</p>
+<ul>
+<li><strong>建分支 / 切换</strong>：工具栏分支菜单（branch）可新建分支、来回切换——<br />
+学生改稿开分支、导师审阅看差异、定稿一键合并；</li>
+<li><strong>历史回看</strong>：左侧 <strong>History</strong> 面板查看版本历史与逐行对比；</li>
+<li><strong>AI 改动隔离</strong>：第 9 节中保留的 AI 改动独立成版本，任何一次都可回滚。</li>
+</ul>
+<div style="page-break-after: always;"></div>
+<h2 id="11-远程仓库同步gitee" id="gitee">11. 远程仓库同步（Gitee）</h2>
+<p>把项目连接到 Gitee（码云），获得代码托管与 PR 工作流。</p>
+<p><strong>首次发布</strong>：工具栏 <strong>Publish</strong> → 选择 Gitee → 授权连接 → 填仓库名即创建远端仓库。</p>
+<p><strong>日常同步</strong>：之后每次点 <strong>Push</strong> 推送、<strong>Pull</strong> 拉取；也可以在 Gitee 上直接开 PR。</p>
+<p><strong>异常处理</strong></p>
+<table style="width:11%;">
+<colgroup>
+<col width="5%" />
+<col width="5%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">现象</th>
+<th align="left">处理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">推送时提示 <strong>Repository missing</strong>（折叠在 Push 面板下）</td>
+<td align="left">远端仓库被删除了——展开提示，点 <strong>Unlink</strong> 解除关联后重新 Publish</td>
+</tr>
+<tr class="even">
+<td align="left">推送报 <strong>403 / 无权限</strong></td>
+<td align="left">连接的 Gitee 账号对目标仓库无写权限；推送失败时弹窗会给出 <strong>Unlink</strong> 入口，换账号重新连接</td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+<h2 id="12-命令面板与快捷键">12. 命令面板与快捷键</h2>
+<p><code>Ctrl/⌘ + K</code> 打开命令面板（支持模糊搜索），可用命令包括：</p>
+<ul>
+<li><strong>Open</strong>：打开任意项目文件；</li>
+<li><strong>File</strong>：Rename / Delete / <strong>Close tab</strong>；</li>
+<li><strong>Insert</strong>：figure（图）、table（表）、equation（公式）常用环境一键插入。</li>
+</ul>
+<p><strong>快捷键速查</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">快捷键</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>Ctrl/⌘ + K</code></td>
+<td align="left">命令面板</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Ctrl/⌘ + S</code></td>
+<td align="left">编译（Typeset）</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Ctrl/⌘ + J</code></td>
+<td align="left">源码当前行跳到 PDF 对应位置</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Ctrl/⌘ + B / I</code></td>
+<td align="left">加粗 / 斜体（视觉模式）</td>
+</tr>
+</tbody>
+</table>
+<div style="page-break-after: always;"></div>
+<h2 id="13-常见问题">13. 常见问题</h2>
+<p><strong>编译失败怎么排查？</strong><br />
+展开编辑器下方的错误面板，点击错误行跳到源码位置；最常见的是缺 <code>\end{...}</code>、<br />
+中文文档未用 xelatex 引擎。改完 <code>Ctrl/⌘ + S</code> 重编即可。</p>
+<p><strong>文件在树里找不到了？</strong><br />
+依次检查：① 是否处于 Source 视图（点 <strong>☰ All</strong> 看全部）；② 是否被拖进了别的<br />
+文件夹或被改名；③ 是否被删除（首页回收站 30 天内可恢复）。</p>
+<p><strong>论文里的人名生僻字（玥、堃、喆等）能正常显示吗？</strong><br />
+能。平台主中文字体（霞鹜新致宋）覆盖常用字与常见人名生僻字；如使用自带模板<br />
+并自带字体文件，请参考该模板说明。</p>
+<p><strong>多人同时编辑会冲突吗？</strong><br />
+不会——实时协同在字符级合并。若两人改了同一段落，建议用分支（第 10 节）：<br />
+各自分支上写，定稿时在界面里合并查看差异。</p>
+<p><strong>AI 改坏了我的稿子怎么办？</strong><br />
+diff 审查框里直接 <strong>Undo</strong>；已经保留的改动，去 History 面板回滚那一条版本。</p>
+<p><strong>忘记密码？</strong><br />
+登录卡点 <strong>Forgot password?</strong> 按提示重置。</p>
+<hr />
+<p><em>本手册对应 tex.wenzao.site 当前版本；产品持续更新，以界面实际功能为准。</em></p>
+
+</main>
+</body>
+</html>

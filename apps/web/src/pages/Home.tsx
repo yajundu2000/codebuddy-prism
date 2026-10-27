@@ -4,6 +4,7 @@ import { api, ApiError, ProjectSummary, RemoteInfo, TemplateCategory, TemplateIn
 import { useToast } from '../components/Toast';
 import { useDialogs } from '../components/Dialogs';
 import { useAuth } from '../components/Auth';
+import { withBase } from '../basePath';
 import Modal from '../components/Modal';
 import ShareModal from '../components/ShareModal';
 import { IconDoc, IconLink, IconTrash, IconX } from '../components/Icons';
@@ -414,6 +415,9 @@ export default function Home() {
         {/* AGPL section 13: a network instance must offer its users the source. */}
         <footer className="home__legal">
           <span>© {new Date().getFullYear()} codebuddy-prism · AGPL-3.0</span>
+          <a className="btn btn--ghost btn--small" href={withBase('/manual.html')} target="_blank" rel="noreferrer" data-testid="open-manual">
+            用户手册
+          </a>
           <button className="btn btn--ghost btn--small" onClick={() => setAboutOpen(true)} data-testid="open-about">
             About &amp; source
           </button>

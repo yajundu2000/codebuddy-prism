@@ -195,7 +195,7 @@ export default function Landing({ login }: { login: ReactNode }) {
           <Brand />
           <p className="landing__footer-note">TeX写作智能体 · 文灶网</p>
         </div>
-        <p className="landing__footer-note">商务微信 yajun__du · 邮箱 yajundu@126.com · AGPL-3.0 · <a href={withBase('/source-code.tar.gz')} download>源码</a> · © 2026</p>
+        <p className="landing__footer-note">商务微信 yajun__du · 邮箱 yajundu@126.com · <a href={withBase('/manual.html')} target="_blank" rel="noreferrer">用户手册</a> · AGPL-3.0 · <a href={withBase('/source-code.tar.gz')} download>源码</a> · © 2026</p>
         {/* 备案沿用主体站 wenzao.site（同一运营主体：深蓝湾流） */}
         <p className="landing__beian" data-testid="landing-beian">
           <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">粤ICP备2026116494号-1</a>
