@@ -137,10 +137,15 @@ export default {
               placeholder: 'Title, author, keywords…',
               style: { width: '100%' },
               autocomplete: 'off',
+              name: 'citation-query',
               dataset: { testid: 'reference-search' },
-              // no value attribute while empty — a bare text input invites the
-              // password manager to autofill the login email into it
+              // the password manager insists on autofilling the login email
+              // here (autocomplete=off alone does not stop it): mount the
+              // field readonly — autofill skips readonly fields — then unlock
+              // it below once the fill window has passed
+              readonly: searchTerm ? null : '',
               value: searchTerm || null,
+              onfocus: (e) => { e.target.readOnly = false; },
               oninput: (e) => onSearchInput(e.target.value),
             }),
           );
@@ -165,6 +170,18 @@ export default {
         }
 
         draw();
+        // Second line of defence past the readonly gate: once the browser's
+        // fill window has passed, unlock the field and clear anything
+        // email-shaped a password manager squeezed in anyway.
+        setTimeout(() => {
+          const el = root.querySelector('[data-testid="reference-search"]');
+          if (!el) return;
+          el.readOnly = false;
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) {
+            el.value = '';
+            onSearchInput('');
+          }
+        }, 1200);
       },
     });
   },
