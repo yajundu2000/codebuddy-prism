@@ -248,6 +248,9 @@ test.describe('cite-from-search (OpenAlex)', () => {
       await page.getByTestId('search-hit-W111').click();
       // a \cite is inserted and the entry lands in the .bib
       await expect(page.locator('.cm-content')).toContainText('\\cite{', { timeout: 15_000 });
+      // …and the .bib opens with the cursor on the new entry, like a GB/T paste
+      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 15_000 });
+      await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{doe2020,/);
       const bib = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
       expect(bib.length).toBeGreaterThan(1);
     } finally {

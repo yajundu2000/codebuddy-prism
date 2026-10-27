@@ -49,6 +49,8 @@ export default {
             await aldine.project.refreshFiles();
             if (body.key) {
               aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
+              // show the entry where it landed, same as a GB/T paste
+              if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
               aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} and inserted citation`, 'ok');
             }
           } catch (err) {
