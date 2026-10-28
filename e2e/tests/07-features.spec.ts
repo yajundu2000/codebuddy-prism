@@ -49,27 +49,41 @@ test.describe('v0.2 features', () => {
       // the .bib appears only when the paste lands an entry, at that entry
       await expect(page.getByTestId('active-file')).toHaveText('main.tex');
 
-      // requirements 2-4: paste, convert, the entry lands highlighted in the .bib
+      // requirements 2-4: paste, convert, the .bib peeks in on the new entry
+      // for a second, then the editor returns to the prose
       await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
       await page.getByTestId('gbt-add').click();
-      await expect(page.locator('.cm-content')).toContainText('@article{XCQ202637047,', { timeout: 15_000 });
-      await expect(page.locator('.cm-content')).toContainText('新传奇');
-      // the cursor lands on the new entry's opener line
+      // the one-second peek itself — the only inherently time-boxed check
+      await expect(page.getByTestId('active-file')).toHaveText('refs.bib', { timeout: 2_000 });
+      // back on the prose: cursor on the line that got the \cite, box cleared
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await expect(page.locator('.cm-activeLine')).toContainText('\\cite{XCQ202637047}');
+      await expect(page.getByTestId('gbt-citation-input')).toHaveValue('');
+      await expect.poll(async () =>
+        (await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text()),
+      ).toContain('\\cite{XCQ202637047}');
+
+      // the .bib itself, checked on a manual tab open (the peek is gone):
+      // cursor restored onto the entry, content there, BibTeX highlighting
+      // live (token spans carry the highlight style's hashed classes)
+      await page.getByTestId('etab-refs.bib').click();
       await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{XCQ202637047,/);
-      // BibTeX highlighting is live: token spans carry the highlight style's
-      // hashed classes (HighlightStyle paints via stylesheet, not inline style)
+      await expect(page.locator('.cm-content')).toContainText('新传奇');
       await expect(page.locator('.cm-content .cm-line span[class^="ͼ"]').first()).toBeVisible();
 
       const raw = await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text();
       expect(raw).toContain('10.26938/j.cnki.CN42-1794/Z.2026.37.015');
       expect(raw).toContain('seed2020'); // the seed entry survived
+      await page.getByTestId('etab-main.tex').click();
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex');
 
-      // pasting the same citation again is a duplicate, not a second entry
+      // pasting the same citation again is a duplicate, not a second entry —
+      // and still earns a \cite in the prose, peek, and return
       await page.getByTestId('gbt-citation-input').fill('[1]董丁槊,刘荣.《黑神话：悟空》对外传播效果探究——基于YouTube视频评论的情感分析[J].新传奇,2026,(37):47-49.DOI:10.26938/j.cnki.CN42-1794/Z.2026.37.015.');
       await page.getByTestId('gbt-add').click();
       await expect(page.locator('.toast').filter({ hasText: 'Already in bibliography' })).toBeVisible();
-      // a duplicate still parks the cursor on the existing entry
-      await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{XCQ202637047,/);
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await expect(page.locator('.cm-activeLine')).toContainText('\\cite{XCQ202637047}');
       const entries = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
       expect(entries.filter((e: { key: string }) => e.key === 'XCQ202637047')).toHaveLength(1);
 
@@ -81,7 +95,11 @@ test.describe('v0.2 features', () => {
       // raw BibTeX pastes work too (a leading @), sanitized and deduped by DOI
       await page.getByTestId('gbt-citation-input').fill('@article{myKey2024,\n  title = {Pasted directly},\n  author = {Zhou Wu},\n  year = {2024},\n  doi = {10.9999/paste},\n}');
       await page.getByTestId('gbt-add').click();
-      await expect(page.locator('.cm-content')).toContainText('Pasted directly', { timeout: 15_000 });
+      // the peek comes and goes; the entry's presence is checked on disk
+      await expect.poll(async () =>
+        (await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text()),
+      ).toContain('Pasted directly');
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
       const pasted = await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text();
       expect(pasted).toContain('10.9999/paste');
       expect(pasted).not.toContain('&amp;'); // sanitized like every other entry source
@@ -248,12 +266,13 @@ test.describe('cite-from-search (OpenAlex)', () => {
       // back to the prose file, the way a writer uses this mid-draft
       await page.getByTestId("etab-main.tex").click();
       await page.getByTestId('search-hit-W111').click();
-      // the \cite went into the prose file at the cursor
-      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 15_000 });
+      // the .bib peeks in on the new entry — the only time-boxed check
+      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 2_000 });
+      // …then back to the prose, cursor beside the inserted \cite
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await expect(page.locator('.cm-activeLine')).toContainText('\\cite{doe2020}');
       const prose = await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text();
       expect(prose).toContain('\\cite{doe2020}');
-      // …and the .bib opens with the cursor on the new entry, like a GB/T paste
-      await expect(page.locator('.cm-activeLine')).toHaveText(/@article\{doe2020,/);
       const bib = await (await request.get(`/api/projects/${id}/bib?branch=main`)).json();
       expect(bib.length).toBeGreaterThan(1);
     } finally {
@@ -269,8 +288,10 @@ test.describe('cite-from-search (OpenAlex)', () => {
       await page.getByTestId('reference-search').fill('doi-less mock');
       await page.getByTestId("etab-main.tex").click();
       await page.getByTestId('search-hit-W222').click();
-      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 15_000 });
-      await expect(page.locator('.cm-activeLine')).toHaveText(/smith2019/);
+      // peek, then back to the prose beside the inserted \cite
+      await expect(page.getByTestId('active-file')).toHaveText('references.bib', { timeout: 2_000 });
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await expect(page.locator('.cm-activeLine')).toContainText('\\cite{smith2019}');
       const prose = await (await request.get(`/api/projects/${id}/file?branch=main&path=main.tex`)).text();
       expect(prose).toContain('\\cite{smith2019}');
     } finally {

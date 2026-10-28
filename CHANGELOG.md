@@ -16,6 +16,12 @@ All notable changes to Aldine are documented here. The format follows
   and a duplicate paste jumps to the existing entry just the same. The
   plugin host's `openFile` grew an optional `line` argument; the add
   reference API responses now carry the entry's line.
+- Cite: adding a reference — GB/T paste, raw BibTeX, or an OpenAlex search
+  hit — drops `\cite{key}` at the cursor of the open prose file (skipped
+  with a "type it where you cite it" toast when the .bib itself is the
+  active file), peeks at the new entry in the .bib for a second (cursor on
+  its opener line, flashed), and returns to the prose with the cursor
+  beside the inserted `\cite`. A GB/T paste also clears the paste box.
 - Editor tabs: every file opened this session keeps a tab above the editor;
   clicking switches (only the active pane stays mounted), and switching back
   restores the cursor line and scroll position. Tabs close with × (closing

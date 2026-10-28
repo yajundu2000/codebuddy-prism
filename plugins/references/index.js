@@ -28,8 +28,25 @@ export default {
         let searching = false;
         let searchSeq = 0;
 
+        // Both add paths end the same way: \cite at the cursor (unless the
+        // .bib itself is the active file), a one-second peek at the entry
+        // where it landed, then back to the prose — the pane stashes the
+        // cursor right after the inserted \cite and restores it on the way
+        // back.
+        const landCitation = (body) => {
+          const proseFile = aldine.project.activeFile();
+          if (body.bibFile && proseFile === body.bibFile) {
+            aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key} to ${body.bibFile}; type \\cite{${body.key}} where you cite it`, 'ok');
+          } else {
+            aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
+            aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} to ${body.bibFile} and inserted citation`, 'ok');
+          }
+          if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
+          if (proseFile && proseFile !== body.bibFile) setTimeout(() => aldine.project.openFile(proseFile), 1000);
+        };
+
         // OpenAlex search → pick a hit → the server fetches its BibTeX and
-        // appends it; the \cite lands at the cursor of the open file.
+        // appends it; the landing is shared with a GB/T paste.
         const addQuery = async (q) => {
           if (!q || busy) return;
           busy = true; draw();
@@ -42,18 +59,7 @@ export default {
             const body = await res.json();
             if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
             await aldine.project.refreshFiles();
-            if (body.key) {
-              // \cite belongs in the prose file at the cursor — NOT in the .bib
-              // itself (onShow may have made the .bib the active file)
-              if (body.bibFile && aldine.project.activeFile() === body.bibFile) {
-                aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key}; type \\cite{${body.key}} where you cite it`, 'ok');
-              } else {
-                aldine.editor.insertAtCursor(`\\cite{${body.key}}`);
-                aldine.toast(body.duplicate ? `Already in bibliography — inserted \\cite{${body.key}}` : `Added ${body.key} and inserted citation`, 'ok');
-              }
-              // show the entry where it landed, same as a GB/T paste
-              if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
-            }
+            if (body.key) landCitation(body);
           } catch (err) {
             aldine.toast(`Lookup failed: ${err.message}`, 'error');
           }
@@ -61,7 +67,8 @@ export default {
         };
 
         // GB/T 7714-2025 paste → BibTeX: offline parse, appended to the
-        // project's bibliography (the server resolves which .bib that is).
+        // project's bibliography (the server resolves which .bib that is);
+        // the landing is shared with a search hit.
         const addGbt = async () => {
           const c = citation.trim();
           if (!c || busy) return;
@@ -75,9 +82,9 @@ export default {
             const body = await res.json();
             if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
             citation = '';
+            gbtInput.value = ''; // the skeleton is built once; without this the pasted text survives in the DOM
             await aldine.project.refreshFiles();
-            if (body.bibFile) aldine.project.openFile(body.bibFile, body.line);
-            aldine.toast(body.duplicate ? `Already in bibliography — ${body.key}` : `Added ${body.key} to ${body.bibFile}`, 'ok');
+            landCitation(body);
           } catch (err) {
             aldine.toast(err.message, 'error');
           }
