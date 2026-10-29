@@ -16,6 +16,8 @@ services:
       COMPILER_URL: http://compiler:4020
       AUTH_ENABLED: "1"
       ALDINE_MCP: "1"
+      # Absolute pdf/deep links and the inline PDF viewer need the public origin.
+      ALDINE_PUBLIC_URL: ${ALDINE_PUBLIC_URL:-}
       # Assistant panel: OpenAI-compatible endpoint, key server-side only.
       # Default backend is Hunyuan; any compatible endpoint works.
       PRISM_AI_API_KEY: ${PRISM_AI_API_KEY:-}

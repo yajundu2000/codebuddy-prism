@@ -47,8 +47,13 @@ case "${1:-}" in
     echo "pushed."
     ;;
   up)
-    $SSH "cd $REMOTE_DIR && docker compose -f docker-compose.prism.yml --env-file .env up -d --wait && sleep 2 && curl -sf http://localhost:${PRISM_PORT:-8080}/api/version || curl -sf http://localhost:${PRISM_PORT:-8080}/api/health || true"
-    echo; echo "deployed: http://$SERVER_IP:${PRISM_PORT:-8080}"
+    # The bind is per machine, never in the shared deploy/.env (a push ships
+    # that file to BOTH machines and would silently flip the other one):
+    # the prod box sits behind weixin-caddy and must not expose 8080 publicly;
+    # the test box has no caddy and lives on its public 8080.
+    BIND="${PRISM_BIND:-$([ "$SERVER_IP" = "129.204.147.164" ] && echo 172.18.0.1 || echo 0.0.0.0)}"
+    $SSH "cd $REMOTE_DIR && PRISM_BIND=$BIND docker compose -f docker-compose.prism.yml --env-file .env up -d --wait && sleep 2 && curl -sf http://$BIND:${PRISM_PORT:-8080}/api/version || curl -sf http://$BIND:${PRISM_PORT:-8080}/api/health || true"
+    echo; echo "deployed: http://$SERVER_IP:${PRISM_PORT:-8080} (bind $BIND)"
     ;;
   logs)
     $SSH "cd $REMOTE_DIR && docker compose -f docker-compose.prism.yml logs --tail=80 ${2:-}"
