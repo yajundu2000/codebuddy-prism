@@ -7,6 +7,12 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Manual: the Gitee sync section shows a 13 s GIF of creating a personal
+  access token (scopes `user_info`/`projects`/`pull_requests`) and pasting
+  it into the connect box — the step users stumble on most.
+- Landing: the "文献引用，一贴即得" feature card shows a 15 s GIF of the
+  GB/T paste → `\cite` → `.bib` peek → back-to-prose flow (800 px wide,
+  1.4 MB, lazy) in place of the static Cite screenshot.
 - The user manual ships as a page: `GET /manual.html` (self-contained,
   dark-world styled, generated from the in-repo
   `TeX写作智能体用户手册.md`), linked from the landing footer and the

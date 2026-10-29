@@ -239,6 +239,10 @@ TeX写作智能体是一个 AI 原生的协作 LaTeX 写作平台：实时协同
 
 **日常同步**：之后每次点 **Push** 推送、**Pull** 拉取；也可以在 Gitee 上直接开 PR。
 
+**私人令牌**：连接需要一个 Gitee 私人令牌——Gitee 头像 → 设置 → 安全设置 → 私人令牌，勾选默认的 `user_info`、`projects`、`pull_requests` 三项，生成后粘贴到连接框（只显示一次，完整复制）。
+
+<p><img src="/manual/gitee-token.gif" alt="动图：在 Gitee 创建私人令牌并粘贴到导入连接框的完整过程" style="max-width:100%;border:1px solid var(--border,#333);border-radius:8px"></p>
+
 **异常处理**
 
 | 现象 | 处理 |
