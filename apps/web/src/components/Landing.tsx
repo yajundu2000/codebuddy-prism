@@ -44,8 +44,8 @@ const FEATURES = [
     h: '文献引用，一贴即得',
     p: '把 GB/T 7714 格式的文献条目粘贴进 Cite 面板，自动转为 BibTeX 并入引用库，正文 \\cite 自动补全。',
     bullets: ['Zotero 整库同步为 .bib', 'OpenAlex 两亿五千万篇文献检索', 'DOI / arXiv 一键转引文'],
-    shot: '/landing/cite.png',
-    alt: 'Cite 面板与带语法高亮的 BibTeX 文献库',
+    shot: '/landing/cite.gif',
+    alt: '动图：GB/T 7714 文献粘贴进 Cite 面板，\\cite 自动落入正文光标处，.bib 闪现新条目后回到正文',
   },
 ];
 
