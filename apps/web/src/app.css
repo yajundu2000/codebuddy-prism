@@ -1381,6 +1381,8 @@ a.btn { text-decoration: none; }
 .admin__num { text-align: right !important; font-variant-numeric: tabular-nums; }
 .admin__badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: var(--text-xs); font-weight: 600; }
 .admin__muted { color: var(--text-3); }
+.admin__batch { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.admin__hint { color: var(--text-3); font-size: var(--text-s); margin: 0; }
 .admin__error { color: var(--error); }
 .admin__foot { color: var(--text-3); font-size: var(--text-s); margin-top: 14px; }
 

@@ -52,7 +52,21 @@ export interface AdminUserRow {
   admin: boolean;
   projects: number;
   compileSecondsThisMonth: number;
+  /** Batch-provisioned 学号/工号 sign-in name, when the account has one. */
+  loginName?: string;
+  mustChangePassword?: boolean;
 }
+
+export interface AdminBatchResult {
+  created: number;
+  skipped: number;
+  errors: { line: string; error: string }[];
+}
+
+/** Largest paste the batch route will process. scryptSync per new account
+ *  blocks the event loop; a roster paste is capped, stream if a whole
+ *  faculty ever lands here. */
+const BATCH_MAX_LINES = 500;
 
 function activeSince(users: { lastSeenAt?: string }[], days: number, now: number): number {
   const cutoff = now - days * 864e5;
@@ -92,6 +106,8 @@ export async function adminUsers(now = Date.now()): Promise<AdminUserRow[]> {
     admin: isAdmin(auth.pub(u)),
     projects: owned.get(u.id) || 0,
     compileSecondsThisMonth: Math.round((await usageFor(u.id, new Date(now))).seconds),
+    loginName: u.loginName,
+    mustChangePassword: u.mustChangePassword,
   })));
 }
 
@@ -105,5 +121,39 @@ export async function registerAdminRoutes(app: FastifyInstance, reqUser: (req: F
     });
     admin.get('/api/admin/stats', async () => adminStats());
     admin.get('/api/admin/users', async () => adminUsers());
+    // Fallback recovery for a batch account: password back to the 学号/工号,
+    // forced through first-login setup again, signed out everywhere. For the
+    // student who lost the password and cannot be reached by mail. Param is
+    // userId, not id: the root-level project guard preHandler treats any :id
+    // as a project id and would 404 on the user's id.
+    admin.post<{ Params: { userId: string } }>('/api/admin/users/:userId/reset-to-id', async (req, reply) => {
+      try {
+        const { loginName } = await auth.adminResetToLoginPassword(req.params.userId);
+        return { ok: true, loginName };
+      } catch (err: any) {
+        return reply.code(400).send({ error: err?.message || String(err) });
+      }
+    });
+    // Batch-provision 学号/工号 accounts from a pasted roster, one per line
+    // (`学号 姓名`, any whitespace/comma separators). Initial password = the
+    // 学号 itself; the account is forced through /api/auth/setup at first
+    // sign-in. Re-pasting an existing 学号 skips it — never resets an account
+    // that already finished setting up.
+    admin.post<{ Body: { text?: string } }>('/api/admin/users/batch', async (req) => {
+      const lines = String(req.body?.text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, BATCH_MAX_LINES);
+      const result: AdminBatchResult = { created: 0, skipped: 0, errors: [] };
+      for (const line of lines) {
+        // An email-shaped 学号 would make the login identifier ambiguous
+        // (login tries the email namespace first).
+        const [loginName, ...rest] = line.split(/[\s,;\t]+/).filter(Boolean);
+        const name = rest.join(' ');
+        if (!loginName || !name) { result.errors.push({ line, error: 'Each line needs a 学号/工号 and a name' }); continue; }
+        if (loginName.includes('@')) { result.errors.push({ line, error: '学号/工号 cannot look like an email address' }); continue; }
+        if (await db().findUserByLogin(loginName)) { result.skipped++; continue; }
+        try { await auth.registerBatchUser(loginName, name); result.created++; }
+        catch (err: any) { result.errors.push({ line, error: err?.message || String(err) }); }
+      }
+      return result;
+    });
   });
 }

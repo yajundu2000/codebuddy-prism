@@ -268,6 +268,10 @@ const authHook = AUTH_ENABLED ? {
       user = await userFromRequest(requestHeaders.cookie as string | undefined);
     }
     if (!user) throw new Error('Not authenticated');
+    // Same rule as the routes.ts onRequest choke point: a batch account that
+    // has not finished /api/auth/setup gets nothing. Socket upgrades bypass
+    // Fastify hooks, so this is the only place the guard can reach them.
+    if (user.mustChangePassword) throw new Error('Set up your account before continuing');
     let meta;
     try { meta = await readMeta(parsed.projectId); } catch { throw new Error('project not found'); }
     if (!canAccess(meta, user)) throw new Error('Access denied');

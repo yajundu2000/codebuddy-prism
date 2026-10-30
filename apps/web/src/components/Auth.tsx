@@ -68,7 +68,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const selfGated = typeof window !== 'undefined' && SELF_GATED_PATHS.some((p) => window.location.pathname === withBase(p));
   if (authEnabled && (!user || hasResetToken) && !selfGated) return <Landing login={<LoginScreen providers={providers} passwordAuth={passwordAuth} onAuthed={(u) => setUser(u)} />} />;
 
+  // A batch account (学号/工号) mid-setup: unusable until an email is bound and
+  // the initial ID password replaced. The server 403s every other route; this
+  // is the client face of that rule.
+  if (authEnabled && user?.mustChangePassword) return <FirstLoginSetup name={user.name} onDone={refresh} />;
+
   return <Ctx.Provider value={{ loading, authEnabled, user, admin, providers, passwordAuth, mcpEnabled, publicUrl, setUser, refresh }}>{children}</Ctx.Provider>;
+}
+
+/** Forced first sign-in step for batch-provisioned accounts: bind an email and
+ *  replace the initial 学号/工号 password. Mirrors the login card's look. */
+function FirstLoginSetup({ name, onDone }: { name: string; onDone(): Promise<void> }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setError('');
+    if (password !== password2) { setError('The two passwords do not match'); return; }
+    setBusy(true);
+    try {
+      await api.setupAccount(email.trim(), password);
+      await onDone();
+    } catch (err: any) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="login">
+      <div className="login__card">
+        <Brand big />
+        <p className="home__tag" style={{ marginBottom: 18 }}>Set up your account, {name}.</p>
+        <p className="login__info">Your initial password is your 学号. Choose an email address and a new password to finish setting up.</p>
+        <input className="input login__input" type="email" placeholder="Your email address" value={email} data-testid="setup-email" autoFocus onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <input className="input login__input" type="password" placeholder="New password (min 8 characters)" value={password} data-testid="setup-password" onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <input className="input login__input" type="password" placeholder="Confirm new password" value={password2} data-testid="setup-password2" onChange={(e) => setPassword2(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        {error && <p className="login__error" data-testid="setup-error">{error}</p>}
+        <button className="btn btn--primary login__submit" onClick={submit} disabled={busy} aria-busy={busy || undefined} data-testid="setup-submit">
+          {busy ? '…' : 'Finish setup'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset';
@@ -172,7 +217,7 @@ export function LoginScreen({ providers, passwordAuth, onAuthed, heading, regist
               <input className="input login__input" placeholder="Name (optional)" value={name} data-testid="auth-name" onChange={(e) => setName(e.target.value)} />
             )}
             {mode !== 'reset' && (
-              <input className="input login__input" type="email" placeholder="Email" value={email} data-testid="auth-email" autoFocus onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+              <input className="input login__input" type={mode === 'login' ? 'text' : 'email'} placeholder={mode === 'login' ? 'Email or 学号' : 'Email'} value={email} data-testid="auth-email" autoFocus onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
             )}
             {mode === 'reset' && (
               <input className="input login__input" placeholder="Reset token" value={token} data-testid="auth-token" onChange={(e) => setToken(e.target.value)} />

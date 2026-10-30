@@ -7,6 +7,15 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Batch accounts: an administrator pastes a roster (one 学号/工号 + name per
+  line) on the admin page and creates sign-in accounts whose initial password
+  is the 学号/工号 itself. At first sign-in the account is locked out of
+  everything (HTTP and collab alike) until it binds an email and chooses a
+  new password; sign-in accepts an email or a 学号/工号, and the ordinary
+  email self-registration is unchanged. Binding sends the address a
+  notification (the mailbox is now the account's recovery channel), and the
+  admin table gains "Reset to 学号" — the lost-password fallback that needs
+  no mail delivery.
 - Manual: the Gitee sync section shows a 13 s GIF of creating a personal
   access token (scopes `user_info`/`projects`/`pull_requests`) and pasting
   it into the connect box — the step users stumble on most.

@@ -1,7 +1,9 @@
 import { withBase } from './basePath';
 
-/** email is null for accounts whose provider shared none (ORCID); orcid is the iD when signed in that way. */
-export interface AuthUser { id: string; email: string | null; name: string; provider?: string; orcid?: string }
+/** email is null for accounts whose provider shared none (ORCID); orcid is the iD when signed in that way.
+ *  mustChangePassword: a batch-provisioned (学号/工号) account that has not
+ *  finished first-login setup — the app renders nothing but the setup screen. */
+export interface AuthUser { id: string; email: string | null; name: string; provider?: string; orcid?: string; mustChangePassword?: boolean }
 export interface OAuthProviderInfo { id: string; label: string }
 export interface ProjectSummary {
   id: string;
@@ -60,7 +62,11 @@ export interface AdminUserRow {
   admin: boolean;
   projects: number;
   compileSecondsThisMonth: number;
+  loginName?: string;
+  mustChangePassword?: boolean;
 }
+
+export interface AdminBatchResult { created: number; skipped: number; errors: { line: string; error: string }[] }
 
 export interface BranchInfo { name: string; head: string; message: string; date: string }
 export interface ProjectDetail extends ProjectSummary { branches: BranchInfo[] }
@@ -417,6 +423,12 @@ export const api = {
   me: () => req<{ authEnabled: boolean; passwordAuth: boolean; user: AuthUser | null; providers: OAuthProviderInfo[]; admin: boolean; mcpEnabled?: boolean; publicUrl?: string | null }>('/api/auth/me'),
   adminStats: () => req<AdminStats>('/api/admin/stats'),
   adminUsers: () => req<AdminUserRow[]>('/api/admin/users'),
+  adminBatchCreate: (text: string) =>
+    req<AdminBatchResult>('/api/admin/users/batch', { method: 'POST', body: JSON.stringify({ text }) }),
+  adminResetToId: (userId: string) =>
+    req<{ ok: boolean; loginName: string }>(`/api/admin/users/${userId}/reset-to-id`, { method: 'POST' }),
+  setupAccount: (email: string, newPassword: string) =>
+    req<{ user: AuthUser }>('/api/auth/setup', { method: 'POST', body: JSON.stringify({ email, newPassword }) }),
   changePassword: (currentPassword: string, newPassword: string) =>
     req<{ ok: boolean }>('/api/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
   resetRequest: (email: string) =>

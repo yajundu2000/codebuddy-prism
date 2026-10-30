@@ -24,6 +24,12 @@ export interface User {
   provider?: string;
   /** Stable provider-scoped identity, `orcid:0000-0002-1825-0097`. Unique. */
   subject?: string;
+  /** Batch-provisioned sign-in name (学号/工号). Unique when present; a
+   *  separate namespace from email. */
+  loginName?: string;
+  /** Set at batch creation, cleared by /api/auth/setup. While set, every
+   *  route except auth me/setup/logout 403s. */
+  mustChangePassword?: boolean;
 }
 
 export interface Reply { author: string; body: string; createdAt: string }
@@ -182,6 +188,8 @@ export interface DataStore {
   getUser(id: string): Promise<User | null>;
   findUserByEmail(emailLower: string): Promise<User | null>;
   findUserBySubject(subject: string): Promise<User | null>;
+  /** By batch-provisioned 学号/工号 (exact match, no case folding). */
+  findUserByLogin(loginName: string): Promise<User | null>;
   updateUser(u: User): Promise<void>;
   /** Every account, oldest first. Instance administration only. */
   listUsers(): Promise<User[]>;

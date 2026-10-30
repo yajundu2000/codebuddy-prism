@@ -114,6 +114,9 @@ export class JsonStore implements DataStore {
     if (u.subject && Object.values(m).some((x) => x.subject === u.subject && x.id !== u.id)) {
       throw new Error('An account for that identity already exists');
     }
+    if (u.loginName && Object.values(m).some((x) => x.loginName === u.loginName && x.id !== u.id)) {
+      throw new Error('An account with that 学号/工号 already exists');
+    }
     m[u.id] = this.clone(u);
     this.write(this.usersPath, m);
   }
@@ -128,6 +131,8 @@ export class JsonStore implements DataStore {
   async getUser(id: string) { return this.clone(this.users()[id] || null); }
   async findUserByEmail(email: string) { return this.clone(Object.values(this.users()).find((u) => u.email === email) || null); }
   async findUserBySubject(subject: string) { return this.clone(Object.values(this.users()).find((u) => u.subject === subject) || null); }
+  /** Exact match as pasted — 学号/工号 are digits in practice, no case folding. */
+  async findUserByLogin(loginName: string) { return this.clone(Object.values(this.users()).find((u) => u.loginName === loginName) || null); }
 
   // ---- sessions ----
   private sessions() { return this.read<Record<string, SessionRow>>(this.sessionsPath, {}); }

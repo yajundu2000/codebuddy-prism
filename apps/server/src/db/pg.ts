@@ -111,34 +111,42 @@ export class PgStore implements DataStore {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS subject text;
       CREATE UNIQUE INDEX IF NOT EXISTS users_subject_idx ON users(subject);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at text;
+      -- Batch-provisioned accounts: 学号/工号 sign-in name (partial unique —
+      -- NULLs never collide) and the forced first-login-setup flag.
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS login_name text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
+      CREATE UNIQUE INDEX IF NOT EXISTS users_login_name_idx ON users(login_name) WHERE login_name IS NOT NULL;
     `);
   }
   async close(): Promise<void> { await this.pool?.end(); }
 
   // ---- users ----
   private rowToUser(r: any): User {
-    return { id: r.id, email: r.email, name: r.name, salt: r.salt, hash: r.hash, createdAt: r.created_at, provider: r.provider ?? undefined, subject: r.subject ?? undefined, lastSeenAt: r.last_seen_at ?? undefined };
+    return { id: r.id, email: r.email, name: r.name, salt: r.salt, hash: r.hash, createdAt: r.created_at, provider: r.provider ?? undefined, subject: r.subject ?? undefined, lastSeenAt: r.last_seen_at ?? undefined, loginName: r.login_name ?? undefined, mustChangePassword: r.must_change_password ?? undefined };
   }
   async createUser(u: User) {
     try {
       await this.pool.query(
-        `INSERT INTO users(id,email,name,salt,hash,created_at,provider,subject,last_seen_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        [u.id, u.email, u.name, u.salt, u.hash, u.createdAt, u.provider ?? null, u.subject ?? null, u.lastSeenAt ?? null],
+        `INSERT INTO users(id,email,name,salt,hash,created_at,provider,subject,last_seen_at,login_name,must_change_password) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [u.id, u.email, u.name, u.salt, u.hash, u.createdAt, u.provider ?? null, u.subject ?? null, u.lastSeenAt ?? null, u.loginName ?? null, u.mustChangePassword ?? false],
       );
     } catch (err: any) {
       // Same messages as the JSON backend, so register() surfaces one
       // user-facing error regardless of datastore (unique_violation on
-      // users.email or users_subject_idx).
+      // users.email, users_subject_idx or users_login_name_idx).
       if (err?.code === '23505') {
-        throw new Error(String(err.constraint).includes('subject') ? 'An account for that identity already exists' : 'An account with that email already exists');
+        const c = String(err.constraint);
+        throw new Error(c.includes('subject') ? 'An account for that identity already exists'
+          : c.includes('login_name') ? 'An account with that 学号/工号 already exists'
+          : 'An account with that email already exists');
       }
       throw err;
     }
   }
   async updateUser(u: User) {
     await this.pool.query(
-      `UPDATE users SET email=$2,name=$3,salt=$4,hash=$5,created_at=$6,provider=$7,subject=$8,last_seen_at=$9 WHERE id=$1`,
-      [u.id, u.email, u.name, u.salt, u.hash, u.createdAt, u.provider ?? null, u.subject ?? null, u.lastSeenAt ?? null],
+      `UPDATE users SET email=$2,name=$3,salt=$4,hash=$5,created_at=$6,provider=$7,subject=$8,last_seen_at=$9,login_name=$10,must_change_password=$11 WHERE id=$1`,
+      [u.id, u.email, u.name, u.salt, u.hash, u.createdAt, u.provider ?? null, u.subject ?? null, u.lastSeenAt ?? null, u.loginName ?? null, u.mustChangePassword ?? false],
     );
   }
   async listUsers() {
@@ -158,6 +166,10 @@ export class PgStore implements DataStore {
   }
   async findUserBySubject(subject: string) {
     const { rows } = await this.pool.query(`SELECT * FROM users WHERE subject=$1`, [subject]);
+    return rows[0] ? this.rowToUser(rows[0]) : null;
+  }
+  async findUserByLogin(loginName: string) {
+    const { rows } = await this.pool.query(`SELECT * FROM users WHERE login_name=$1`, [loginName]);
     return rows[0] ? this.rowToUser(rows[0]) : null;
   }
 

@@ -39,13 +39,13 @@ const SESSION_DAYS = 30;
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export type { User } from './db/types.js';
-export interface PublicUser { id: string; email: string | null; name: string; provider?: string; orcid?: string }
+export interface PublicUser { id: string; email: string | null; name: string; provider?: string; orcid?: string; mustChangePassword?: boolean }
 
 /** Session and OAuth-state cookies get the Secure flag when the deployment is HTTPS. */
 export const SECURE_COOKIES = (process.env.ALDINE_PUBLIC_URL || '').startsWith('https') || process.env.COOKIE_SECURE === '1';
 
 export function pub(u: User): PublicUser {
-  return { id: u.id, email: u.email, name: u.name, provider: u.provider, orcid: orcidOf(u) };
+  return { id: u.id, email: u.email, name: u.name, provider: u.provider, orcid: orcidOf(u), mustChangePassword: u.mustChangePassword || undefined };
 }
 /** The ORCID iD behind an `orcid:…` subject, for display and author metadata. */
 export function orcidOf(u: { subject?: string }): string | undefined {
@@ -93,9 +93,83 @@ function refuseSsoAccount(user: User): void {
 }
 
 export async function login(email: string, password: string): Promise<PublicUser> {
-  const user = await db().findUserByEmail(email.trim().toLowerCase());
+  // The identifier is an email address or a batch-provisioned 学号/工号 —
+  // email first, then the login-name namespace. One error message for both
+  // legs, so a probe cannot learn which namespace a victim is in.
+  const id = email.trim();
+  const user = (await db().findUserByEmail(id.toLowerCase())) ?? (await db().findUserByLogin(id));
   if (!user || user.provider || !user.hash || !verifyPassword(password, user)) throw new Error('Incorrect email or password');
   return pub(user);
+}
+
+/**
+ * A batch-provisioned account (admin paste, 学号/工号 roster): no email yet,
+ * initial password = the 学号/工号 itself. Not register() — there is no email,
+ * and the initial ID password is deliberately exempt from the 8-char floor;
+ * /api/auth/setup enforces the floor on the replacement password.
+ */
+export async function registerBatchUser(loginName: string, name: string): Promise<PublicUser> {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const user: User = {
+    id: crypto.randomBytes(9).toString('base64url'),
+    email: null,
+    name: name.trim(),
+    loginName,
+    mustChangePassword: true,
+    salt,
+    hash: hashPassword(loginName, salt),
+    createdAt: new Date().toISOString(),
+  };
+  await db().createUser(user);
+  return pub(user);
+}
+
+/** Finish a batch account's first sign-in: bind an email, replace the initial
+ *  ID password, clear the flag. Only for flagged accounts — this is also what
+ *  stops an ordinary account from re-pointing its email (isAdmin compares the
+ *  live email against ADMIN_EMAILS). Returns the full record so the route can
+ *  name the 学号 in the binding notification. */
+export async function completeSetup(userId: string, email: string, newPassword: string): Promise<User> {
+  email = email.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Enter a valid email address');
+  if (newPassword.length < 8) throw new Error('Password must be at least 8 characters');
+  // Binding an unclaimed admin address would make the student an instance
+  // administrator — reserved until the operator registers it normally.
+  if (ADMIN_EMAILS.has(email)) throw new Error('That email address is reserved');
+  const user = await db().getUser(userId);
+  if (!user) throw new Error('Sign in required');
+  if (!user.mustChangePassword) throw new Error('This account is already set up');
+  if (await db().findUserByEmail(email)) throw new Error('An account with that email already exists');
+  user.email = email;
+  user.salt = crypto.randomBytes(16).toString('hex');
+  user.hash = hashPassword(newPassword, user.salt);
+  user.mustChangePassword = false;
+  try {
+    await db().updateUser(user);
+  } catch (err: any) {
+    // Postgres' unique index is the race backstop for the check above; the
+    // JSON backend's check-then-write window is single-process and only this
+    // already-authenticated user can walk into it.
+    if (err?.code === '23505' || /email already exists/.test(String(err?.message))) throw new Error('An account with that email already exists');
+    throw err;
+  }
+  await revokeUser(userId); // the setup session is re-issued by the route
+  return user;
+}
+
+/** The admin's fallback for a batch account that lost its password (and the
+ *  mailbox cannot be reached): back to the initial state — password = the
+ *  学号/工号, forced through first-login setup again, everywhere signed out. */
+export async function adminResetToLoginPassword(userId: string): Promise<{ loginName: string }> {
+  const user = await db().getUser(userId);
+  if (!user) throw new Error('No such account');
+  if (!user.loginName) throw new Error('Not a batch account');
+  user.salt = crypto.randomBytes(16).toString('hex');
+  user.hash = hashPassword(user.loginName, user.salt);
+  user.mustChangePassword = true;
+  await db().updateUser(user);
+  await revokeUser(userId);
+  return { loginName: user.loginName };
 }
 
 export function getUser(id: string): Promise<User | null> {

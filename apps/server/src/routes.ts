@@ -251,6 +251,32 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     } catch (err: any) { return reply.code(400).send({ error: err.message }); }
   });
 
+  // first-login setup for a batch-provisioned account (学号/工号): bind an
+  // email, replace the initial ID password. Exempt from the must-change guard
+  // below — without the exemption the account could never finish setting up.
+  app.post<{ Body: { email: string; newPassword: string } }>('/api/auth/setup', async (req, reply) => {
+    if (!auth.AUTH_ENABLED) return reply.code(400).send({ error: 'Auth is not enabled' });
+    if (auth.SSO_ONLY) return passwordDisabled(reply);
+    const user = reqUser(req);
+    if (!user) return reply.code(401).send({ error: 'Sign in required' });
+    try {
+      const u = await auth.completeSetup(user.id, req.body?.email || '', req.body?.newPassword || '');
+      // A trace in the person's mailbox: this address is now the recovery
+      // channel for the account, and only the owner should have been able
+      // to bind it. Fire-and-forget like the reset mail.
+      if (u.email) {
+        email.sendMail({
+          to: u.email,
+          subject: 'Your email was bound to your TeX写作智能体 account',
+          text: `你好 ${u.name}：\n\n这个邮箱已绑定到 TeX写作智能体（wenzao.site）的账户「${u.name}」（学号/工号 ${u.loginName}）。\n此后可用此邮箱或学号/工号登录；忘记密码时通过它在登录页自助重置。\n\n如非本人操作，请联系管理员。\n`,
+          html: `<p>你好 ${u.name}：</p><p>这个邮箱已绑定到 TeX写作智能体（wenzao.site）的账户「${u.name}」（学号/工号 <code>${u.loginName}</code>）。</p><p>此后可用此邮箱或学号/工号登录；忘记密码时通过它在登录页自助重置。</p><p>如非本人操作，请联系管理员。</p>`,
+        }).catch((err) => console.error('[aldine] setup notification email failed:', err?.message || err));
+      }
+      reply.header('set-cookie', auth.sessionCookie(await auth.createSession(u.id)));
+      return { user: auth.pub(u) };
+    } catch (err: any) { return reply.code(400).send({ error: err.message }); }
+  });
+
   // forgot-password: issue a reset token. Emailed if SMTP is configured; otherwise
   // logged server-side and (when ALDINE_RESET_ECHO=1) returned for self-host relay.
   app.post<{ Body: { email: string } }>('/api/auth/reset-request', async (req, reply) => {
@@ -382,6 +408,22 @@ h1{font-size:1.1rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;color:var(--muted);ove
     const user = auth.AUTH_ENABLED ? await auth.userFromRequest(req.headers.cookie) : null;
     (req as any)._user = user;
     if (user) noteActivity(user.id);
+  });
+  // A batch-provisioned account (学号/工号) is unusable until it finishes
+  // /api/auth/setup. This is the one HTTP choke point — every /api route and
+  // /mcp 403s, including /api/auth/password (which would otherwise change the
+  // password without ever binding an email) and /api/tokens (which would mint
+  // an agent PAT). Static/SPA paths pass so the setup screen can load; the
+  // collab websocket re-checks in collab.ts onAuthenticate because socket
+  // upgrades never pass through Fastify hooks.
+  app.addHook('onRequest', async (req, reply) => {
+    const user = (req as any)._user as auth.PublicUser | null;
+    if (!auth.AUTH_ENABLED || !user?.mustChangePassword) return;
+    const p = req.url.split('?')[0];
+    if (p === '/api/auth/me' || p === '/api/auth/setup' || p === '/api/auth/logout') return;
+    if (p.startsWith('/api/') || p === '/mcp') {
+      return reply.code(403).send({ error: 'Set up your account before continuing', code: 'MUST_CHANGE_PASSWORD' });
+    }
   });
   await registerAdminRoutes(app, reqUser);
 

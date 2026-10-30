@@ -52,7 +52,9 @@ case "${1:-}" in
     # the prod box sits behind weixin-caddy and must not expose 8080 publicly;
     # the test box has no caddy and lives on its public 8080.
     BIND="${PRISM_BIND:-$([ "$SERVER_IP" = "129.204.147.164" ] && echo 172.18.0.1 || echo 0.0.0.0)}"
-    $SSH "cd $REMOTE_DIR && PRISM_BIND=$BIND docker compose -f docker-compose.prism.yml --env-file .env up -d --wait && sleep 2 && curl -sf http://$BIND:${PRISM_PORT:-8080}/api/version || curl -sf http://$BIND:${PRISM_PORT:-8080}/api/health || true"
+    # Public origin is per machine too (the shared deploy/.env ships to both).
+    URL="${ALDINE_PUBLIC_URL:-$([ "$SERVER_IP" = "129.204.147.164" ] && echo https://wenzao.site || echo "http://$SERVER_IP:${PRISM_PORT:-8080}")}"
+    $SSH "cd $REMOTE_DIR && PRISM_BIND=$BIND ALDINE_PUBLIC_URL=$URL docker compose -f docker-compose.prism.yml --env-file .env up -d --wait && sleep 2 && curl -sf http://$BIND:${PRISM_PORT:-8080}/api/version || curl -sf http://$BIND:${PRISM_PORT:-8080}/api/health || true"
     echo; echo "deployed: http://$SERVER_IP:${PRISM_PORT:-8080} (bind $BIND)"
     ;;
   logs)

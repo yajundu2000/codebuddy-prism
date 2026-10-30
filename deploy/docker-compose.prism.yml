@@ -16,6 +16,16 @@ services:
       COMPILER_URL: http://compiler:4020
       AUTH_ENABLED: "1"
       ALDINE_MCP: "1"
+      # Instance admins by email (batch-account provisioning lives behind this).
+      ALDINE_ADMIN_EMAILS: ${ALDINE_ADMIN_EMAILS:-}
+      # Outbound mail (password resets, binding notices). Same secrets for
+      # every machine, so unlike BIND/PUBLIC_URL they live in the shared .env.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       # Absolute pdf/deep links and the inline PDF viewer need the public origin.
       ALDINE_PUBLIC_URL: ${ALDINE_PUBLIC_URL:-}
       # Assistant panel: OpenAI-compatible endpoint, key server-side only.

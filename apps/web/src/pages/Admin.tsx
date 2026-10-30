@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError, AdminStats, AdminUserRow } from '../api';
+import { api, ApiError, AdminBatchResult, AdminStats, AdminUserRow } from '../api';
 import { useAuth } from '../components/Auth';
 import Brand from '../components/Brand';
 
@@ -43,6 +43,31 @@ export default function Admin() {
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [batchText, setBatchText] = useState('');
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchResult, setBatchResult] = useState<AdminBatchResult | null>(null);
+
+  const createBatch = async () => {
+    setBatchBusy(true);
+    setBatchResult(null);
+    try {
+      setBatchResult(await api.adminBatchCreate(batchText));
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not create the accounts');
+    }
+    setBatchBusy(false);
+  };
+
+  const resetToId = async (u: AdminUserRow) => {
+    if (!window.confirm(`Reset ${u.name} (${u.loginName})? The password goes back to the 学号/工号, they must set up again at next sign-in, and they are signed out everywhere.`)) return;
+    try {
+      await api.adminResetToId(u.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not reset the account');
+    }
+  };
 
   const load = async () => {
     try {
@@ -113,21 +138,51 @@ export default function Admin() {
             </div>
 
             <h2 className="home__section">Accounts</h2>
+            <div className="admin__batch" data-testid="admin-batch">
+              <p className="admin__hint">
+                Paste one account per line — 学号/工号 and 姓名. The initial password is the 学号/工号 itself;
+                everyone chooses an email address and a new password at first sign-in.
+              </p>
+              <textarea
+                className="input"
+                rows={5}
+                placeholder={'2026001 张三\n2026002 李四'}
+                value={batchText}
+                data-testid="admin-batch-input"
+                onChange={(e) => setBatchText(e.target.value)}
+                style={{ width: '100%', fontFamily: 'inherit', lineHeight: 1.5 }}
+              />
+              <button className="btn btn--primary" onClick={createBatch} disabled={batchBusy || !batchText.trim()} data-testid="admin-batch-submit">
+                {batchBusy ? 'Creating…' : 'Create accounts'}
+              </button>
+              {batchResult && (
+                <p data-testid="admin-batch-result">
+                  Created {batchResult.created} · Skipped {batchResult.skipped}
+                  {batchResult.errors.length > 0 && (
+                    <ul style={{ margin: '6px 0 0', padding: '0 0 0 18px' }}>
+                      {batchResult.errors.map((e) => <li key={e.line}><code>{e.line}</code> — {e.error}</li>)}
+                    </ul>
+                  )}
+                </p>
+              )}
+            </div>
             <div className="admin__table-wrap">
               <table className="admin__table" data-testid="admin-users">
                 <thead>
-                  <tr><th>Name</th><th>Email</th><th>Sign-in</th><th>Joined</th><th>Last seen</th><th className="admin__num">Projects</th><th className="admin__num">Compile, this month</th></tr>
+                  <tr><th>Name</th><th>学号/工号</th><th>Email</th><th>Sign-in</th><th>Joined</th><th>Last seen</th><th className="admin__num">Projects</th><th className="admin__num">Compile, this month</th></tr>
                 </thead>
                 <tbody>
                   {(users || []).map((u) => (
                     <tr key={u.id} data-testid="admin-user-row">
-                      <td>{u.name}{u.admin && <span className="admin__badge" title="On the admin list">admin</span>}</td>
+                      <td>{u.name}{u.admin && <span className="admin__badge" title="On the admin list">admin</span>}{u.mustChangePassword && <span className="admin__badge" title="Created in a batch; forced through first-login setup">setup pending</span>}</td>
+                      <td>{u.loginName || <span className="admin__muted">—</span>}</td>
                       <td>{u.email || <span className="admin__muted">no email</span>}</td>
                       <td>{u.provider || 'password'}</td>
                       <td title={u.createdAt}>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td title={u.lastSeenAt}>{ago(u.lastSeenAt, now)}</td>
                       <td className="admin__num">{u.projects}</td>
                       <td className="admin__num">{minutes(u.compileSecondsThisMonth)}</td>
+                      <td>{u.loginName && <button className="btn btn--small" onClick={() => resetToId(u)} data-testid="admin-reset" title="Password back to the 学号/工号; forced setup at next sign-in">Reset to 学号</button>}</td>
                     </tr>
                   ))}
                 </tbody>

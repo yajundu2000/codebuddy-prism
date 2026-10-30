@@ -73,6 +73,18 @@ async function runSuite(store, label) {
     'An account for that identity already exists',
     `${label}: duplicate subject message`,
   );
+
+  // ---- batch-provisioned accounts keyed by 学号/工号 ----
+  const batchUser = { id: `u6-${t}`, email: null, name: '张三', salt: 's', hash: 'h', createdAt: new Date().toISOString(), loginName: `s${t}`, mustChangePassword: true };
+  await store.createUser(batchUser);
+  eq(await store.getUser(batchUser.id), batchUser, `${label}: batch user roundtrip`);
+  eq(await store.findUserByLogin(batchUser.loginName), batchUser, `${label}: findUserByLogin`);
+  check((await store.findUserByLogin(`missing-${t}`)) === null, `${label}: findUserByLogin missing → null`);
+  await throws(
+    () => store.createUser({ ...batchUser, id: `u7-${t}` }),
+    'An account with that 学号/工号 already exists',
+    `${label}: duplicate loginName message`,
+  );
   // Binding a subject to an existing email account (first sign-in after the
   // provider started reporting one) is an update, not a new row.
   await store.updateUser({ ...user, name: 'Ada L.', subject: `github:${t}` });
