@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "build": "tsc && node viewer/build.mjs",
+    "build": "tsc && node viewer/build.mjs && node -e \"require('fs').cpSync('src/agent/skills','dist/agent/skills',{recursive:true})\"",
     "typecheck": "tsc --noEmit && tsc --noEmit -p viewer",
     "test:github": "tsx test/github-sync.integration.mjs",
     "test:gitlab": "tsx test/gitlab-sync.integration.mjs",
