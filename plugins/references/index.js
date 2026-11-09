@@ -149,7 +149,7 @@ export default {
         const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
 
         root.replaceChildren(h('div', { class: 'panel-list', dataset: { testid: 'references-panel' }, style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '8px 6px' } },
-          h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference or a BibTeX entry'),
+          h('div', { class: 'menu__label', style: { padding: '0 2px' } }, 'Paste a GB/T 7714 reference (查新 export with 摘要 works) or a BibTeX entry'),
           gbtInput,
           gbtBtn,
           h('div', { class: 'menu__label', style: { padding: '10px 2px 0' } }, 'Search papers (OpenAlex)'),

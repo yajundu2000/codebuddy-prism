@@ -437,9 +437,19 @@ function gbtKey(source: string, title: string, year: string, issue: string, firs
  * bibField like every other entry source.
  */
 export function parseGbt7714(citation: string): { type: string; key: string; fields: BibFieldValue[] } | null {
-  const s = GBT_STRIP_PREFIX_RE.test(citation) ? citation.replace(GBT_STRIP_PREFIX_RE, '') : citation.trim();
+  let s = GBT_STRIP_PREFIX_RE.test(citation) ? citation.replace(GBT_STRIP_PREFIX_RE, '') : citation.trim();
   const marker = GBT_MARKER_RE.exec(s);
   if (!marker) return null;
+  // 查新 export: the citation carries a trailing `摘要:…` — on the same line
+  // or as its own indented paragraph. Only a 摘要: AFTER the type marker
+  // splits: a title before the marker may legitimately contain the word.
+  let abstract = '';
+  const abs = /摘要\s*[:：]/.exec(s.slice(marker.index + marker[0].length));
+  if (abs) {
+    const at = marker.index + marker[0].length + abs.index;
+    abstract = s.slice(at + abs[0].length).replace(/\s+/g, ' ').trim(); // wrapping collapses — the field lands on one line
+    s = s.slice(0, at).trim();
+  }
   const kind = marker[1];
   const head = s.slice(0, marker.index).trim();
   let tail = s.slice(marker.index + marker[0].length).trim().replace(/^[.．。,，;；、\s]+/, '');
@@ -523,7 +533,7 @@ export function parseGbt7714(citation: string): { type: string; key: string; fie
   } else {
     extra([['howpublished', sourceName]]);
   }
-  extra([['doi', ids.doi ?? ''], ['issn', ids.issn ?? ''], ['isbn', ids.isbn ?? ''], ['url', ids.url ?? ''], ['urldate', ids.urldate ?? '']]);
+  extra([['doi', ids.doi ?? ''], ['issn', ids.issn ?? ''], ['isbn', ids.isbn ?? ''], ['url', ids.url ?? ''], ['urldate', ids.urldate ?? ''], ['abstract', abstract]]);
   const type = /^[JN]/.test(kind) ? 'article'
     : /^M/.test(kind) ? 'book'
     : /^C/.test(kind) ? 'inproceedings'

@@ -70,4 +70,25 @@ eq(parseGbt7714('随便一段没有标记的文字'), null, 'no marker → null'
 eq(parseGbt7714(''), null, 'empty → null');
 eq(parseGbt7714('[J]'), null, 'marker alone (no title) → null');
 
+// 查新 export: the citation line followed by an indented `摘要:…` paragraph —
+// the abstract is split off into its own field, wrapped lines collapse.
+const cx = parseGbt7714(`[1]高杨, 王妍, 王书超. 西安美术学院与王者荣耀合作共创项目的探索与实践[J]. 丝网印刷, 2024, (9): 121-123.
+     摘要:以西安美术学院文创教学团队教学实践为例，以文化创意产业现状和王者荣耀项目
+     发展特性为研究基础，助力高校文创产业的发展。`);
+check(cx != null, '查新 citation+abstract parses');
+eq(cx.type, 'article', '查新 → article');
+eq(cx.key, 'SWYS202409121', '丝网印刷 → SWYS + 2024 + 09 + 121');
+eq(fieldsOf(cx).journaltitle, '丝网印刷', 'journal behind the abstract split');
+eq(fieldsOf(cx).number, '9', 'issue');
+eq(fieldsOf(cx).pages, '121-123', 'pages');
+eq(fieldsOf(cx).abstract, '以西安美术学院文创教学团队教学实践为例，以文化创意产业现状和王者荣耀项目 发展特性为研究基础，助力高校文创产业的发展。', 'abstract: marker stripped, wrapping collapsed');
+check(!('abstract' in fieldsOf(user)), 'plain citation gains no abstract field');
+// Same-line 查新 paste (no newline before 摘要:) — the abstract still splits.
+const cx1 = parseGbt7714('[1]  高杨,王妍,王书超. 西安美术学院与王者荣耀合作共创项目的探索与实践[J].丝网印刷,2024, (9):121-123.  摘要:以西安美术学院文创教学团队教学实践为例，助力高校文创产业的发展。');
+check(cx1 != null && fieldsOf(cx1).abstract === '以西安美术学院文创教学团队教学实践为例，助力高校文创产业的发展。', 'single-line 查新: abstract captured');
+eq(cx1.key, 'SWYS202409121', 'single-line 查新: same key as the paragraph form');
+// 摘要 BEFORE the type marker (a title word) stays inside the citation.
+const titleAbs = parseGbt7714('王五.摘要:不是这里的用法研究[J].读书,2018:3-4.');
+check(titleAbs != null && titleAbs.fields.some((f) => f.name === 'abstract') === false, 'title 摘要: before the marker not split');
+
 console.log('gbt7714: all assertions passed');

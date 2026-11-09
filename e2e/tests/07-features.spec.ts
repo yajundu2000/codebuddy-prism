@@ -106,6 +106,20 @@ test.describe('v0.2 features', () => {
       await page.getByTestId('gbt-citation-input').fill('@article{myKey2024,\n  title = {Pasted directly},\n  author = {Zhou Wu},\n  year = {2024},\n  doi = {10.9999/paste},\n}');
       await page.getByTestId('gbt-add').click();
       await expect(page.locator('.toast').filter({ hasText: 'Already in bibliography' }).first()).toBeVisible();
+
+      // 查新 export: the citation line plus an indented `摘要:…` paragraph —
+      // the abstract lands in its own field, the citation parses clean.
+      // (Wait out the previous paste's one-second .bib peek first: pasting
+      // while the .bib is the active file takes the no-\cite branch.)
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await page.getByTestId('gbt-citation-input').fill('[1]高杨, 王妍, 王书超. 西安美术学院与王者荣耀合作共创项目的探索与实践[J]. 丝网印刷, 2024, (9): 121-123.\n     摘要:以西安美术学院文创教学团队教学实践为例，助力高校文创产业的发展。');
+      await page.getByTestId('gbt-add').click();
+      await expect(page.getByTestId('active-file')).toHaveText('main.tex', { timeout: 10_000 });
+      await expect(page.locator('.cm-activeLine')).toContainText('\\cite{SWYS202409121}');
+      const cx = await (await request.get(`/api/projects/${id}/file?branch=main&path=refs.bib`)).text();
+      expect(cx).toContain('journaltitle = {丝网印刷}');
+      // regex, not a literal `abstract = {…}` — formatEntry pads field names to align
+      expect(cx).toMatch(/abstract\s+= \{以西安美术学院文创教学团队教学实践为例，助力高校文创产业的发展。\},/);
     } finally {
       await cleanup(request, id);
     }

@@ -7,6 +7,9 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Cite tab: a GB/T paste may carry a 查新 export's trailing `摘要:…`
+  paragraph — the abstract is split off into the entry's `abstract` field
+  instead of polluting the citation fields.
 - Batch accounts: an administrator pastes a roster (one 学号/工号 + name per
   line) on the admin page and creates sign-in accounts whose initial password
   is the 学号/工号 itself. At first sign-in the account is locked out of
