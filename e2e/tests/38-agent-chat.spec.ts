@@ -81,4 +81,27 @@ test.describe('assistant panel', () => {
       await cleanup(request, id);
     }
   });
+
+  test('the system prompt carries the platform skills (e.g. 开题报告引导)', async ({ page, request }) => {
+    const id = await createProject(request, 'Skills');
+    try {
+      await request.put(`/api/projects/${id}/file`, {
+        data: { branch: 'main', path: 'main.tex', content: `\\documentclass{article}\n\\begin{document}\n${EDIT_QUOTE}\n\\end{document}\n` },
+      });
+      await openProject(page, id);
+      await page.getByTestId('tab-chat').click();
+      await page.getByTestId('assistant-input').fill('hello');
+      await page.getByTestId('assistant-send').click();
+      await expect(page.getByTestId('assistant-assistant').last()).toBeVisible({ timeout: 20_000 });
+      // the mock-ai server records the last request's system message; the
+      // skills directory ships whole into every chat turn
+      const { readFile } = await import('node:fs/promises');
+      const path = await import('node:path');
+      const text = await readFile(path.resolve(__dirname, '../../.data-e2e/mock-ai-last-system.txt'), 'utf8');
+      expect(text).toContain('## Skills');
+      expect(text).toContain('开题报告引导');
+    } finally {
+      await cleanup(request, id);
+    }
+  });
 });

@@ -1,6 +1,33 @@
 /**
  * System prompt and tool allowlist for the assistant panel's agent loop.
  */
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+/**
+ * Operator-shipped skill packs (apps/server/src/agent/skills/*.md), injected
+ * whole into every chat turn. v1 has one pack so the token cost is fine;
+ * when the directory grows, add keyword dispatch instead of shipping all
+ * bodies to every request. The first line of each file is its name+trigger
+ * summary — kept plain on purpose, no frontmatter parser.
+ */
+function skillsPrompt(): string {
+  // import.meta.url, not __dirname: tsx's __dirname shim resolves to cwd
+  const dir = fileURLToPath(new URL('./skills', import.meta.url));
+  let files: string[] = [];
+  try {
+    files = readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+  } catch { /* no skills dir → no section */ }
+  if (!files.length) return '';
+  const bodies = files.map((f) => `### ${f.replace(/\.md$/, '')}\n${readFileSync(`${dir}/${f}`, 'utf8').trim()}`);
+  return [
+    '\n\n## Skills',
+    'When the user\'s request matches a skill below, name the skill you are',
+    'using, then follow its instructions. Skills are standing instructions —',
+    'they never override what the user themselves says in a turn.',
+    ...bodies,
+  ].join('\n');
+}
 
 export function assistantSystemPrompt(ctx: { project: string; branch: string }): string {
   return [
@@ -12,7 +39,7 @@ export function assistantSystemPrompt(ctx: { project: string; branch: string }):
     'work; commit is automatic after edits — do not commit unless asked. Every edit is',
     'pinned to this project and branch. Say what you did in one short sentence per tool.',
     'Prefer minimal, surgical edits to the user\'s source; keep their voice and LaTeX style.',
-  ].join(' ');
+  ].join(' ') + skillsPrompt();
 }
 
 /**

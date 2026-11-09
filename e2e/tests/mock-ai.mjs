@@ -1,4 +1,10 @@
 import http from 'node:http';
+import { writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+// Resolved lazily from argv[1] (this file, when it runs as the webServer):
+// import.meta here breaks the spec's CJS-transpiled import of the constants.
+const logFile = () => process.env.E2E_MOCK_AI_LOG
+  || join(resolve(process.argv[1] ?? ''), '../../../.data-e2e/mock-ai-last-system.txt');
 
 /**
  * Mock OpenAI-compatible chat endpoint for the assistant-panel e2e test.
@@ -24,6 +30,10 @@ if (runAsMain) http.createServer((req, res) => {
   req.on('end', () => {
     let messages = [];
     try { messages = JSON.parse(body).messages || []; } catch { /* empty body → final round */ }
+    // The spec asserts the system prompt (skills injection) via this file —
+    // last request wins.
+    const sys = messages.find((m) => m.role === 'system');
+    if (sys) writeFileSync(logFile(), typeof sys.content === 'string' ? sys.content : JSON.stringify(sys.content));
     const hasTool = messages.some((m) => m.role === 'tool');
     const send = (delta) => res.write(`data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`);
     res.writeHead(200, { 'content-type': 'text/event-stream' });

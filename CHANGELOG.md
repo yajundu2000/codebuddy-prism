@@ -7,6 +7,11 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Assistant skills: markdown packs under `apps/server/src/agent/skills/`
+  ship with the image and inject whole into the assistant's system prompt.
+  First pack: 开题报告引导 — an interview wizard that walks the user
+  through the proposal form section by section (questions with candidates
+  from the project's bibliography, one edit per section, Keep/Undo review).
 - The sidebar's right edge is a drag handle (with keyboard arrows and a
   double-click reset): the Assistant chat outgrows the old fixed 230px.
 - Cite tab: a GB/T paste may carry a 查新 export's trailing `摘要:…`
