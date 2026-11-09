@@ -7,6 +7,8 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The sidebar's right edge is a drag handle (with keyboard arrows and a
+  double-click reset): the Assistant chat outgrows the old fixed 230px.
 - Cite tab: a GB/T paste may carry a 查新 export's trailing `摘要:…`
   paragraph — the abstract is split off into the entry's `abstract` field
   instead of polluting the citation fields.

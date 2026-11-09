@@ -354,8 +354,24 @@ test.describe('misc editor features', () => {
       await expect(page.locator('.pane--preview')).toBeVisible();
       await expect(page.getByTestId('sidebar')).toBeVisible();
       expect((await editorWidth())!.width).toBeLessThan(only!.width);
+
+      // the sidebar's right edge drags wider (keyboard-driven, deterministic)
+      // and the width survives a reload
+      const sidebarWidth = () => page.getByTestId('sidebar').boundingBox();
+      const base = (await sidebarWidth())!.width;
+      await page.getByTestId('sidebar-resizer').focus();
+      for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+      const sideWide = (await sidebarWidth())!.width;
+      expect(sideWide).toBeGreaterThan(base);
+      await page.reload();
+      await expect(page.locator('.cm-content')).toBeVisible({ timeout: 15_000 });
+      expect((await sidebarWidth())!.width).toBeCloseTo(sideWide, 0);
+      // double-click resets to the default
+      await page.getByTestId('sidebar-resizer').dblclick();
+      expect((await sidebarWidth())!.width).toBeCloseTo(230, 0);
     } finally {
       await page.evaluate(() => window.localStorage.removeItem('aldine.layout')).catch(() => {});
+      await page.evaluate(() => window.localStorage.removeItem('aldine.sidebarWidth')).catch(() => {});
       await cleanup(request, id);
     }
   });

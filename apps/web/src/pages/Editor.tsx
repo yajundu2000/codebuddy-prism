@@ -90,6 +90,20 @@ export default function Editor() {
   const [compile, setCompile] = useState<{ status: CompileStatus; result: CompileResult | null; wallMs?: number }>({ status: 'idle', result: null });
   const [pdfWidth, setPdfWidth] = useState(() => Math.max(360, Math.round(window.innerWidth * 0.4)));
   const [resizing, setResizing] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const w = Number(localStorage.getItem('aldine.sidebarWidth'));
+    return w >= 200 && w <= 640 ? w : 230;
+  });
+  // Floor keeps the clamp from inverting on a narrow window (same trick as
+  // pdfWidth's).
+  const clampSidebarWidth = (w: number) => Math.min(Math.max(200, w), Math.max(280, window.innerWidth - 640));
+  const setSidebarWidthPersist = (v: number | ((w: number) => number)) => {
+    setSidebarWidth((prev) => {
+      const next = clampSidebarWidth(typeof v === 'function' ? v(prev) : v);
+      localStorage.setItem('aldine.sidebarWidth', String(next));
+      return next;
+    });
+  };
   // Floor the upper bound so a narrow window can't push it below the 280
   // minimum (which would invert the clamp and collapse the pane).
   const clampPdfWidth = (w: number) => Math.min(Math.max(280, w), Math.max(360, window.innerWidth - 500));
@@ -97,7 +111,10 @@ export default function Editor() {
   // leave a preview wider than the room for it and squeeze the editor away.
   // Same bound as the resizer's.
   useEffect(() => {
-    const fit = () => setPdfWidth((w) => Math.min(w, Math.max(280, window.innerWidth - 500)));
+    const fit = () => {
+      setPdfWidth((w) => Math.min(w, Math.max(280, window.innerWidth - 500)));
+      setSidebarWidth((w) => clampSidebarWidth(w));
+    };
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
@@ -1093,8 +1110,8 @@ export default function Editor() {
       )}
 
       <div className={`workspace${resizing ? ' workspace--resizing' : ''}`}>
-        {layout.sidebar && (
-        <aside className={`pane sidebar${sidebarHidden ? ' sidebar--hidden' : ''}`} data-testid="sidebar">
+        {layout.sidebar && (<>
+        <aside className={`pane sidebar${sidebarHidden ? ' sidebar--hidden' : ''}`} data-testid="sidebar" style={{ width: sidebarWidth }}>
           <div className="sidebar__tabs" role="tablist">
             <button className={`sidebar__tab ${tab === 'files' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('files')} role="tab" data-testid="tab-files">Files</button>
             <button className={`sidebar__tab ${tab === 'history' ? 'sidebar__tab--active' : ''}`} onClick={() => setTab('history')} role="tab" data-testid="tab-history">History</button>
@@ -1194,7 +1211,45 @@ export default function Editor() {
             ))}
           </div>
         </aside>
-        )}
+        <div
+          className={`resizer${resizing ? ' resizer--drag' : ''}`}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          aria-valuenow={Math.round(sidebarWidth)}
+          aria-valuemin={200}
+          aria-valuemax={Math.max(280, window.innerWidth - 640)}
+          tabIndex={0}
+          data-testid="sidebar-resizer"
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            const el = e.currentTarget;
+            // Capture keeps the drag alive over the file tree, the editor and
+            // outside the window, and it works for a finger or a pen.
+            el.setPointerCapture(e.pointerId);
+            const startX = e.clientX;
+            const start = sidebarWidth;
+            setResizing(true);
+            const move = (ev: PointerEvent) => setSidebarWidthPersist(start + (ev.clientX - startX));
+            const up = () => {
+              setResizing(false);
+              el.removeEventListener('pointermove', move);
+              el.removeEventListener('pointerup', up);
+              el.removeEventListener('pointercancel', up);
+            };
+            el.addEventListener('pointermove', move);
+            el.addEventListener('pointerup', up);
+            el.addEventListener('pointercancel', up);
+          }}
+          onDoubleClick={() => setSidebarWidthPersist(230)}
+          onKeyDown={(e) => {
+            const step = e.shiftKey ? 80 : 16;
+            if (e.key === 'ArrowRight') { e.preventDefault(); setSidebarWidthPersist((w) => w + step); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); setSidebarWidthPersist((w) => w - step); }
+          }}
+        />
+        </>)}
 
         <main className="pane pane--editor" style={{ flex: 1 }}>
           {activeFile ? (
