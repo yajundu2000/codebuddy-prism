@@ -7,6 +7,9 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The Download button names the PDF `project-rootfile.pdf` (root's
+  extension stripped): one project's proposal and thesis downloads no
+  longer land under the same filename.
 - Assistant skills: markdown packs under `apps/server/src/agent/skills/`
   ship with the image and inject whole into the assistant's system prompt.
   First pack: 开题报告引导 — an interview wizard that walks the user

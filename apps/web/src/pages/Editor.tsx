@@ -1468,7 +1468,7 @@ export default function Editor() {
               <a
                 className="btn btn--ghost btn--small"
                 href={compile.result.pdfUrl}
-                download={`${(project?.name || 'document').replace(/[\\/:*?"<>|]/g, '-')}.pdf`}
+                download={`${(project?.name || 'document').replace(/[\\/:*?"<>|]/g, '-')}-${(project?.rootFile || 'document').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '-')}.pdf`}
                 title="Download the compiled PDF"
                 data-testid="download-pdf"
               >
