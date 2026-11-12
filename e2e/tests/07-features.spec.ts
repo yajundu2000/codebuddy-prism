@@ -328,10 +328,10 @@ test.describe('misc editor features', () => {
       // neutral gray in both themes (light #6e6e73, dark #9ca0ab)
       const [r, g, b] = styles.color.match(/\d+/g)!.map(Number);
       expect(Math.abs(r - g) + Math.abs(g - b)).toBeLessThan(30);
-      // the panel's buttons (next/previous/replace…): gray face, black label
+      // the panel's buttons (next/previous/replace…): 海天蓝 face, black label
       const btn = page.locator('.cm-panel button').first();
       const btnStyles = await btn.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }));
-      expect(btnStyles.bg).toBe('rgb(212, 212, 216)');
+      expect(btnStyles.bg).toBe('rgb(56, 163, 240)');
       const [br, bg2, bb] = btnStyles.color.match(/\d+/g)!.map(Number);
       expect(br + bg2 + bb).toBeLessThan(150); // black-ish label
     } finally {

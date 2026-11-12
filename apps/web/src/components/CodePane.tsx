@@ -189,12 +189,12 @@ const aldineTheme = EditorView.theme({
     border: '1px solid var(--hairline)',
     borderRadius: '4px',
   },
-  // buttons per explicit design call: gray face, black label — same literal
+  // buttons per explicit design call: 海天蓝 face, black label — same literal
   // values in both themes so the panel reads identically everywhere.
   '.cm-panel button': {
-    backgroundColor: '#d4d4d8',
+    backgroundColor: '#38a3f0',
     color: '#000',
-    border: '1px solid rgba(0, 0, 0, 0.4)',
+    border: '1px solid rgba(0, 0, 0, 0.35)',
     borderRadius: '4px',
   },
 });
