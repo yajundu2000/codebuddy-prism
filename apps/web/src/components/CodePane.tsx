@@ -180,6 +180,21 @@ const aldineTheme = EditorView.theme({
   '.cm-tooltip-autocomplete ul li[aria-selected]': { backgroundColor: 'var(--accent-fill)', color: 'var(--on-accent)' },
   '.cm-completionDetail': { fontStyle: 'normal', opacity: 0.65, fontSize: '11px' },
   '.cm-panels': { backgroundColor: 'var(--bg-inset)', color: 'var(--text)', borderColor: 'var(--hairline)' },
+  // search-panel controls: CodeMirror's base theme leaves their colors to the
+  // browser, which renders typed text indistinguishable from the panel —
+  // pin both faces (gray --text-2 on the panel bg) per theme.
+  '.cm-panel input': {
+    backgroundColor: 'var(--bg-panel)',
+    color: 'var(--text-2)',
+    border: '1px solid var(--hairline)',
+    borderRadius: '4px',
+  },
+  '.cm-panel button': {
+    backgroundColor: 'var(--bg-panel)',
+    color: 'var(--text-2)',
+    border: '1px solid var(--hairline)',
+    borderRadius: '4px',
+  },
 });
 
 /** Spellcheck is presentation config, swapped at runtime via a Compartment. */

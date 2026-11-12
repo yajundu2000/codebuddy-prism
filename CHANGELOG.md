@@ -7,6 +7,8 @@ All notable changes to Aldine are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The editor's search panel inputs render typed text as theme gray on the
+  panel background — the browser default left them near-invisible.
 - The Download button names the PDF `project-rootfile.pdf` (root's
   extension stripped): one project's proposal and thesis downloads no
   longer land under the same filename.

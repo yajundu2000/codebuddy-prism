@@ -315,6 +315,29 @@ test.describe('cite-from-search (OpenAlex)', () => {
 });
 
 test.describe('misc editor features', () => {
+  test('the search panel input is legible (neutral-gray text on its own background)', async ({ page, request }) => {
+    const id = await createProject(request, 'Search Colors');
+    try {
+      await openProject(page, id);
+      await page.locator('.cm-content').click();
+      await page.keyboard.press('Control+f');
+      const input = page.locator('.cm-panel input').first();
+      await expect(input).toBeVisible();
+      const styles = await input.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }));
+      expect(styles.color).not.toBe(styles.bg);
+      // neutral gray in both themes (light #6e6e73, dark #9ca0ab)
+      const [r, g, b] = styles.color.match(/\d+/g)!.map(Number);
+      expect(Math.abs(r - g) + Math.abs(g - b)).toBeLessThan(30);
+      // the panel's buttons (next/previous/replace…) carry the same pinned faces
+      const btn = page.locator('.cm-panel button').first();
+      const btnStyles = await btn.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }));
+      expect(btnStyles.color).not.toBe(btnStyles.bg);
+      expect(btnStyles.bg).not.toBe('rgba(0, 0, 0, 0)');
+    } finally {
+      await cleanup(request, id);
+    }
+  });
+
   test('Layout menu toggles the PDF and sidebar panes and persists', async ({ page, request }) => {
     const id = await createProject(request, 'Layout Menu');
     try {
