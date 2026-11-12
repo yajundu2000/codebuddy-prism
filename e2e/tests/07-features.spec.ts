@@ -330,8 +330,9 @@ test.describe('misc editor features', () => {
       expect(Math.abs(r - g) + Math.abs(g - b)).toBeLessThan(30);
       // the panel's buttons (next/previous/replace…): 海天蓝 face, black label
       const btn = page.locator('.cm-panel button').first();
-      const btnStyles = await btn.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }));
+      const btnStyles = await btn.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor, img: getComputedStyle(el).backgroundImage }));
       expect(btnStyles.bg).toBe('rgb(56, 163, 240)');
+      expect(btnStyles.img).toBe('none'); // CM's white gradient would cover it
       const [br, bg2, bb] = btnStyles.color.match(/\d+/g)!.map(Number);
       expect(br + bg2 + bb).toBeLessThan(150); // black-ish label
     } finally {

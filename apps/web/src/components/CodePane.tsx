@@ -191,8 +191,11 @@ const aldineTheme = EditorView.theme({
   },
   // buttons per explicit design call: 海天蓝 face, black label — same literal
   // values in both themes so the panel reads identically everywhere.
+  // backgroundImage:none is the point: CodeMirror's base theme paints a white
+  // linear-gradient over .cm-button, which covers any background-color.
   '.cm-panel button': {
     backgroundColor: '#38a3f0',
+    backgroundImage: 'none',
     color: '#000',
     border: '1px solid rgba(0, 0, 0, 0.35)',
     borderRadius: '4px',
