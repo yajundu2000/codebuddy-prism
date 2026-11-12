@@ -328,11 +328,12 @@ test.describe('misc editor features', () => {
       // neutral gray in both themes (light #6e6e73, dark #9ca0ab)
       const [r, g, b] = styles.color.match(/\d+/g)!.map(Number);
       expect(Math.abs(r - g) + Math.abs(g - b)).toBeLessThan(30);
-      // the panel's buttons (next/previous/replace…) carry the same pinned faces
+      // the panel's buttons (next/previous/replace…): gray face, black label
       const btn = page.locator('.cm-panel button').first();
       const btnStyles = await btn.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }));
-      expect(btnStyles.color).not.toBe(btnStyles.bg);
-      expect(btnStyles.bg).not.toBe('rgba(0, 0, 0, 0)');
+      expect(btnStyles.bg).toBe('rgb(212, 212, 216)');
+      const [br, bg2, bb] = btnStyles.color.match(/\d+/g)!.map(Number);
+      expect(br + bg2 + bb).toBeLessThan(150); // black-ish label
     } finally {
       await cleanup(request, id);
     }
